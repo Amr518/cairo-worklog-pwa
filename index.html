@@ -96,6 +96,35 @@ select:disabled {
   box-shadow: none;
 }
 
+/* Universal Custom Bottom-Sheet Trigger & Click-Shield Interceptor (D-012) */
+.custom-select-wrap {
+  position: relative;
+  display: block;
+  width: 100%;
+}
+
+.custom-select-wrap select {
+  width: 100%;
+  pointer-events: none !important;
+}
+
+.custom-select-trigger {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  cursor: pointer;
+  background: transparent;
+  border-radius: 10px;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.custom-select-trigger:focus,
+.custom-select-trigger:focus-visible {
+  outline: 2px solid var(--coral);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 3px rgba(36, 34, 105, 0.16);
+}
+
 /* Compact Overrides for Tight Form Grids (e.g., Idea Matrix & Rowbox) */
 .idea select {
   padding: 6px 26px 6px 6px;
@@ -1083,6 +1112,7 @@ function fillSelects(){
   $("#fCat").innerHTML=CATS.map(c=>`<option value="${c[0]}">${isEN()?c[0]:c[1]+" ("+c[0]+")"}</option>`).join("");
   $("#logCat").innerHTML='<option value="">كل الأنواع</option>'+CATS.map(c=>`<option value="${c[0]}">${isEN()?c[0]:c[1]}</option>`).join("");
   if(fc)$("#fCat").value=fc;if(lc)$("#logCat").value=lc;
+  if(typeof initCustomSelectPickers==='function')initCustomSelectPickers();
 }
 function showForm(o,note,title){
   $("#formCard").style.display="block";$("#formTitle").textContent=title||"راجع وسجّل";showSuggest([]);
@@ -1574,6 +1604,7 @@ const sheetSearchInput = document.getElementById('sheet-search-input');
 const sheetItemsList = document.getElementById('sheet-items-list');
 
 let currentPickerType = null;
+let activeTargetSelect = null;
 let currentRawItems = [];
 
 window.renderDiagnosticI18n = function() {
@@ -1678,6 +1709,197 @@ async function initDiagnosticCore() {
   }
 }
 
+function normArabicText(str) {
+  return String(str || '')
+    .toLowerCase()
+    .replace(/[أإآ]/g, 'ا')
+    .replace(/ة/g, 'ه')
+    .replace(/ى/g, 'ي')
+    .replace(/[\u064B-\u065F\u0670]/g, '')
+    .replace(/ـ/g, '')
+    .trim();
+}
+
+function resolveSubtextForOption(selectId, val) {
+  if (selectId === 'fMachine' && typeof allMachines !== 'undefined' && allMachines && allMachines.length > 0) {
+    const match = allMachines.find(m => (m.id === val || m.display_name === val || m.name === val || (m.aliases && m.aliases.includes(val))));
+    if (match) {
+      const parts = [];
+      if (match.building || match.site) parts.push(match.building || match.site);
+      if (match.section || match.area) parts.push(match.section || match.area);
+      if (match.room_no) parts.push(`الغرفة ${match.room_no}`);
+      return parts.join(' • ');
+    }
+  }
+  return '';
+}
+
+function extractSelectOptions(selectEl) {
+  const options = Array.from(selectEl.options || []);
+  const currentVal = selectEl.value;
+
+  return options.map(opt => {
+    const isSelected = (opt.value === currentVal) || opt.selected;
+    const sub = (opt.dataset && opt.dataset.subtext) || (typeof resolveSubtextForOption === 'function' ? resolveSubtextForOption(selectEl.id, opt.value) : '');
+    return {
+      value: opt.value,
+      label: opt.text || opt.label || opt.value,
+      subtext: sub || '',
+      selected: !!isSelected
+    };
+  });
+}
+
+function resolveSelectTitle(selectEl) {
+  const tr = (window.I18N && typeof window.I18N.tr === 'function') ? window.I18N.tr : (s => s);
+  
+  if (selectEl.dataset && selectEl.dataset.sheetTitle) return tr(selectEl.dataset.sheetTitle);
+  
+  // Check adjacent label
+  const wrap = (selectEl.closest && selectEl.closest('.custom-select-wrap')) || selectEl;
+  let labelEl = wrap.previousElementSibling;
+  if (labelEl && labelEl.tagName === 'LABEL') return labelEl.textContent.trim();
+
+  // Check parent container
+  const parent = wrap.parentElement;
+  if (parent) {
+    const parentLabel = parent.querySelector('label');
+    if (parentLabel) return parentLabel.textContent.trim();
+  }
+
+  // Check label[for]
+  if (selectEl.id) {
+    const forLabel = document.querySelector(`label[for="${selectEl.id}"]`);
+    if (forLabel) return forLabel.textContent.trim();
+  }
+
+  // Check aria-label
+  const ariaLabel = selectEl.getAttribute ? selectEl.getAttribute('aria-label') : null;
+  if (ariaLabel) return tr(ariaLabel);
+
+  // Fallback defaults
+  const iconMap = {
+    fMachine: '⚙️ ' + tr('الماكينة'),
+    fCat: '🏷️ ' + tr('نوع الشغل'),
+    fStatus: '📌 ' + tr('الحالة'),
+    logCat: '🏷️ ' + tr('تصفية بالنوع'),
+    logMonth: '📅 ' + tr('تصفية بالشهر'),
+    period: '⏱️ ' + tr('الفترة الزمنية'),
+    lang: '🌐 ' + tr('لغة الكلام'),
+    sRole: '👤 ' + tr('الوظيفة'),
+    gRole: '👤 ' + tr('الوظيفة'),
+    mBld: '🏢 ' + tr('المبنى')
+  };
+
+  return (selectEl.id && iconMap[selectEl.id]) || tr('اختر من القائمة');
+}
+
+function onSelectOptionChosen(targetSelect, chosenValue) {
+  closePicker();
+
+  if (targetSelect) {
+    targetSelect.value = chosenValue;
+
+    // Dispatch native bubbling events
+    targetSelect.dispatchEvent(new Event('input', { bubbles: true }));
+    targetSelect.dispatchEvent(new Event('change', { bubbles: true }));
+
+    // Reset trigger aria-expanded
+    const wrap = targetSelect.closest('.custom-select-wrap');
+    if (wrap) {
+      const trigger = wrap.querySelector('.custom-select-trigger');
+      if (trigger) trigger.setAttribute('aria-expanded', 'false');
+    }
+  }
+}
+
+function openCustomPickerForSelect(selectEl) {
+  const tr = (window.I18N && typeof window.I18N.tr === 'function') ? window.I18N.tr : (s => s);
+  currentPickerType = 'select';
+  activeTargetSelect = selectEl;
+
+  if (sheetSearchInput) {
+    sheetSearchInput.value = '';
+    sheetSearchInput.placeholder = tr('🔍 تصفية في القائمة...');
+  }
+
+  // Set Sheet Title
+  sheetTitle.textContent = resolveSelectTitle(selectEl);
+
+  // Extract Options
+  currentRawItems = extractSelectOptions(selectEl);
+
+  // Toggle Search Box (> 5 options)
+  if (currentRawItems.length > 5 || (selectEl.dataset && selectEl.dataset.searchable === 'true')) {
+    sheetSearchBox.classList.remove('hidden');
+    setTimeout(() => {
+      if (sheetSearchInput) sheetSearchInput.focus();
+    }, 250);
+  } else {
+    sheetSearchBox.classList.add('hidden');
+  }
+
+  renderSheetItems();
+  sheetOverlay.classList.remove('hidden');
+
+  const wrap = selectEl.closest('.custom-select-wrap');
+  if (wrap) {
+    const trigger = wrap.querySelector('.custom-select-trigger');
+    if (trigger) trigger.setAttribute('aria-expanded', 'true');
+  }
+}
+
+function openSelectSheet(selectEl) {
+  return openCustomPickerForSelect(selectEl);
+}
+
+function initCustomSelectPickers() {
+  const targetSelectors = [
+    '#fMachine', '#fCat', '#fStatus', '#logCat', 
+    '#logMonth', '#period', '#sRole', '#mBld', 
+    '#gRole', '#lang'
+  ];
+
+  targetSelectors.forEach(selector => {
+    const sel = document.querySelector(selector);
+    if (!sel) return;
+    if (sel.dataset.customPickerAttached || (sel.parentElement && sel.parentElement.classList.contains('custom-select-wrap'))) return;
+    sel.dataset.customPickerAttached = 'true';
+
+    const wrap = document.createElement('div');
+    wrap.className = 'custom-select-wrap';
+    if (sel.style.display === 'inline-block') wrap.style.display = 'inline-block';
+
+    const trigger = document.createElement('div');
+    trigger.className = 'custom-select-trigger';
+    trigger.setAttribute('role', 'combobox');
+    trigger.setAttribute('aria-haspopup', 'listbox');
+    trigger.setAttribute('aria-expanded', 'false');
+    trigger.setAttribute('tabindex', '0');
+
+    const label = resolveSelectTitle(sel);
+    if (label) trigger.setAttribute('aria-label', label);
+
+    sel.setAttribute('tabindex', '-1');
+    sel.parentNode.insertBefore(wrap, sel);
+    wrap.appendChild(sel);
+    wrap.appendChild(trigger);
+
+    const openHandler = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      openCustomPickerForSelect(sel);
+    };
+
+    trigger.addEventListener('click', openHandler);
+    trigger.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ' || e.key === 'ArrowDown') {
+        openHandler(e);
+      }
+    });
+  });
+}
+
 function openPicker(type) {
   const tr = (window.I18N && typeof window.I18N.tr === 'function') ? window.I18N.tr : (s => s);
   currentPickerType = type;
@@ -1734,11 +1956,12 @@ function openPicker(type) {
 
 function renderSheetItems() {
   const tr = (window.I18N && typeof window.I18N.tr === 'function') ? window.I18N.tr : (s => s);
-  const query = (sheetSearchInput.value || '').trim().toLowerCase();
+  const rawQuery = (sheetSearchInput && sheetSearchInput.value) || '';
+  const query = normArabicText(rawQuery);
   const items = currentRawItems.filter(item => {
     if (!query) return true;
-    const matchLabel = item.label.toLowerCase().includes(query);
-    const matchSub = (item.subtext || '').toLowerCase().includes(query);
+    const matchLabel = normArabicText(item.label).includes(query);
+    const matchSub = normArabicText(item.subtext || '').includes(query);
     return matchLabel || matchSub;
   });
 
@@ -1767,6 +1990,17 @@ function renderSheetItems() {
 
 function closePicker() {
   sheetOverlay.classList.add('hidden');
+  if (activeTargetSelect) {
+    const wrap = activeTargetSelect.closest('.custom-select-wrap');
+    if (wrap) {
+      const trigger = wrap.querySelector('.custom-select-trigger');
+      if (trigger) trigger.setAttribute('aria-expanded', 'false');
+    }
+    activeTargetSelect = null;
+  }
+  if (currentPickerType === 'select') {
+    currentPickerType = null;
+  }
 }
 
 if (sheetCloseBtn) sheetCloseBtn.addEventListener('click', closePicker);
@@ -1779,6 +2013,15 @@ if (sheetSearchInput) sheetSearchInput.addEventListener('input', renderSheetItem
 
 function onPickerItemSelected(val, label) {
   const tr = (window.I18N && typeof window.I18N.tr === 'function') ? window.I18N.tr : (s => s);
+
+  if (currentPickerType === 'select') {
+    const target = activeTargetSelect;
+    activeTargetSelect = null;
+    currentPickerType = null;
+    onSelectOptionChosen(target, val);
+    return;
+  }
+
   closePicker();
 
   if (currentPickerType === 'site') {
@@ -2350,6 +2593,16 @@ if (btnQuickDiag) {
     }
   };
 }
+
+// Initialize custom select pickers on page load
+if (typeof initCustomSelectPickers === 'function') {
+  initCustomSelectPickers();
+}
+document.addEventListener('DOMContentLoaded', () => {
+  if (typeof initCustomSelectPickers === 'function') {
+    initCustomSelectPickers();
+  }
+});
 
 // Initialize on page load
 initGatewayUrl().finally(() => {
