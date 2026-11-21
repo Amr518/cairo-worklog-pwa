@@ -1,4 +1,4 @@
-const CACHE_NAME = "wl-unified-v1";
+const CACHE_NAME = "wl-unified-v2";
 
 const CORE_ASSETS = [
   "./",
@@ -26,15 +26,7 @@ const CORE_ASSETS = [
   "apps/worklog/icon-180.png",
   "apps/worklog/icon-192.png",
   "apps/worklog/logo.png",
-  "apps/worklog/logo-white.png",
-  // Maintenance Sub-App (Zero Modification)
-  "apps/maintenance/index.html",
-  "apps/maintenance/manifest.webmanifest",
-  "apps/maintenance/machines.json",
-  "apps/maintenance/icon-180.png",
-  "apps/maintenance/icon-192.png",
-  "apps/maintenance/icon-512.png",
-  "apps/maintenance/logo-white.png"
+  "apps/worklog/logo-white.png"
 ];
 
 self.addEventListener("install", (event) => {

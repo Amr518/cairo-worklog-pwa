@@ -12,7 +12,7 @@
 <meta name="apple-mobile-web-app-title" content="شغلي">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#242269">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https://ntfy.sh https://api.openai.com http://127.0.0.1:8098 http://localhost:8098;">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https://REPLACE-ME.workers.dev https://api.openai.com http://127.0.0.1:8098 http://localhost:8098;">
 <style>
 :root{--navy:#242269;--coral:#F55B41;--green:#91C361;--blue:#323C8E;--purple:#9B7DCD;--gold:#FDC300;--lblue:#D3DEF2;--cyan:#47BFD9;--alt:#F4F5FA;--line:#dfe2ec;--ink:#1d1d2b;--muted:#6b6f86;--red:#D9534F}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -637,12 +637,12 @@ nav{grid-template-columns:repeat(6,1fr)}
     <label>مفتاح OpenAI API</label><input id="aiKey" type="password" autocomplete="off" dir="ltr" placeholder="sk-...">
     <button class="btn ghost block" id="aiSave" style="margin-top:10px">حفظ</button></div>
   <div class="card"><h3>الخصوصية</h3><div class="muted" style="line-height:1.7">كل اللي بتسجله محفوظ على موبايلك بس. التطبيق مالوش خادم (server) ومحدش يقدر يشوف شغلك غير لما إنت تبعت الملف بنفسك. في الوضع العادي الصوت بيتحول لنص عن طريق خدمة موبايلك (Apple أو Google)، فما تقولش أرقام تشغيلات أو أسماء منتجات أو أي معلومة سرية. ملف Excel بيحتوي كمان على نص كلامك الأصلي، فراجعه قبل ما تبعته.</div></div>
-  <div class="card"><h3>رمز الدخول الشخصي للتشخيص (PIN)</h3>
-    <div class="muted" style="line-height:1.7">الرمز السري الشخصي لتشفير استفسارات الأعطال والتحقق من الهوية (E2EE) بين هاتفك ومساعد الصيانة الميداني، لحماية سرية البيانات الهندسية.</div>
-    <label>رمز PIN الشخصي (4-8 أرقام)</label>
+  <div class="card"><h3>كود الدعوة للتشخيص</h3>
+    <div class="muted" style="line-height:1.7">أدخل كود الدعوة المعتمد من مهندس الصيانة للاتصال بخدمة تشخيص الأعطال عن بُعد.</div>
+    <label for="set-invite-code">كود الدعوة:</label>
     <div style="display:flex;gap:8px;margin-top:6px;">
-      <input id="set-diag-pin" type="password" autocomplete="off" placeholder="أدخل رمز PIN الشخصي..." style="font-size:15px;letter-spacing:2px;">
-      <button class="btn main" id="btn-save-set-pin" type="button" style="white-space:nowrap;">حفظ الرمز</button>
+      <input id="set-invite-code" type="password" autocomplete="off" dir="ltr" placeholder="أدخل كود الدعوة..." style="font-size:15px;letter-spacing:1px;">
+      <button class="btn main" id="btn-save-set-invite" type="button" style="white-space:nowrap;">حفظ الكود</button>
     </div></div>
   <button class="btn red block" id="wipe">مسح كل بياناتي من الموبايل</button>
 </section>
@@ -651,13 +651,13 @@ nav{grid-template-columns:repeat(6,1fr)}
 <section class="tab" id="t-diag">
   <!-- 1. Machine Selection Card -->
   <div class="card">
-    <!-- PIN Status Bar -->
+    <!-- Invite Code Status Bar -->
     <div style="display:flex;justify-content:space-between;align-items:center;background:#F4F5FA;border:1px solid var(--line);border-radius:10px;padding:8px 12px;margin-bottom:12px;font-size:12.5px;">
-      <div id="diag-pin-status" style="display:flex;align-items:center;gap:6px;font-weight:600;color:var(--navy);">
-        <span>🔒</span>
-        <span id="pin-status-text">جاري فحص حالة PIN...</span>
+      <div id="diag-invite-status" style="display:flex;align-items:center;gap:6px;font-weight:600;color:var(--navy);">
+        <span>🔑</span>
+        <span id="invite-status-text">جاري فحص حالة كود الدعوة...</span>
       </div>
-      <button type="button" class="btn ghost" id="btn-edit-diag-pin" style="padding:4px 10px;font-size:11.5px;min-height:unset;">تعديل PIN</button>
+      <button type="button" class="btn ghost" id="btn-edit-invite-code" style="padding:4px 10px;font-size:11.5px;min-height:unset;">تعديل الكود</button>
     </div>
 
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid var(--line);">
@@ -776,18 +776,18 @@ nav{grid-template-columns:repeat(6,1fr)}
   </div>
 </div>
 
-<!-- PIN Prompt Modal -->
-<div id="pin-prompt-modal" class="modal-overlay hidden">
+<!-- Invite Code First-Use Modal -->
+<div id="invite-prompt-modal" class="modal-overlay hidden">
   <div class="modal-dialog">
-    <h3 style="margin: 0 0 10px; font-size: 16px; color: var(--navy);">🔐 إدخال رمز المرور الشخصي (PIN)</h3>
+    <h3 style="margin: 0 0 10px; font-size: 16px; color: var(--navy);">🔑 إدخال كود الدعوة</h3>
     <p style="font-size: 12.5px; color: var(--muted); margin: 0 0 12px; line-height: 1.6;">
-      لحماية خصوصية وسرية الأعطال الفنية، يتم تشفير كافة الاستفسارات تشفيراً تاماً (E2EE). يرجى إدخال رمز PIN الشخصي الخاص بك للمتابعة.
+      للاتصال بخدمة تشخيص الأعطال عن بُعد، يرجى إدخال كود الدعوة المعتمد من مهندس الصيانة لمرة واحدة.
     </p>
-    <label for="diag-pin-input" style="margin: 0 0 6px;">رمز PIN الشخصي:</label>
-    <input id="diag-pin-input" type="password" autocomplete="off" placeholder="مثال: 4-8 أرقام..." style="font-size: 16px; letter-spacing: 2px;">
+    <label for="diag-invite-input" style="margin: 0 0 6px;">كود الدعوة:</label>
+    <input id="diag-invite-input" type="password" autocomplete="off" dir="ltr" placeholder="أدخل كود الدعوة..." style="font-size: 16px; letter-spacing: 1px;">
     <div class="modal-buttons">
-      <button id="btn-cancel-diag-pin" class="btn ghost" type="button">إلغاء</button>
-      <button id="btn-save-diag-pin" class="btn main" type="button">حفظ ومتابعة</button>
+      <button id="btn-cancel-invite" class="btn ghost" type="button">إلغاء</button>
+      <button id="btn-save-invite" class="btn main" type="button">حفظ ومتابعة</button>
     </div>
   </div>
 </div>
@@ -1332,147 +1332,108 @@ let currentSessionId = null;
 let selectedMachine = null;
 let selectedSite = null;
 let selectedSection = null;
-let brokerMode = '4g-relay';
+let brokerMode = 'gateway';
+let invitePromptedOnDiagTab = false;
 
-const QUEUE_CHANNEL = "cairo_tech_pwa_queue_78a1bc49df20";
-const PIN_STORAGE_KEY = 'cairo_tech_diag_pin';
+// Single Gateway origin constant (update here + CSP connect-src after `wrangler deploy`)
+const GATEWAY_URL = "https://REPLACE-ME.workers.dev";
+const INVITE_STORAGE_KEY = 'cairo_tech_invite_code';
 
-function getDiagnosticPin() {
-  return localStorage.getItem(PIN_STORAGE_KEY) || '';
+function getInviteCode() {
+  return (localStorage.getItem(INVITE_STORAGE_KEY) || '').trim();
 }
 
-function saveDiagnosticPin(pin) {
-  if (pin && pin.trim()) {
-    localStorage.setItem(PIN_STORAGE_KEY, pin.trim());
+function saveInviteCode(code) {
+  if (code && code.trim()) {
+    localStorage.setItem(INVITE_STORAGE_KEY, code.trim());
   } else {
-    localStorage.removeItem(PIN_STORAGE_KEY);
+    localStorage.removeItem(INVITE_STORAGE_KEY);
   }
-  updatePinStatusUI();
+  updateInviteStatusUI();
 }
 
-function promptPinModal() {
-  const modal = document.getElementById('pin-prompt-modal');
-  const input = document.getElementById('diag-pin-input');
-  if (input) input.value = getDiagnosticPin();
+function promptInviteModal() {
+  const modal = document.getElementById('invite-prompt-modal');
+  const input = document.getElementById('diag-invite-input');
+  if (input) input.value = getInviteCode();
   if (modal) modal.classList.remove('hidden');
 }
 
-function openPinModal() {
-  promptPinModal();
+function openInviteModal() {
+  promptInviteModal();
 }
 
-function closePinModal() {
-  const modal = document.getElementById('pin-prompt-modal');
+function closeInviteModal() {
+  const modal = document.getElementById('invite-prompt-modal');
   if (modal) modal.classList.add('hidden');
 }
 
-function updatePinStatusUI() {
-  const pin = getDiagnosticPin();
-  const statusEl = document.getElementById('diag-pin-status');
-  const statusText = document.getElementById('pin-status-text');
-  const setPinInput = document.getElementById('set-diag-pin');
-  if (setPinInput) {
-    setPinInput.value = pin;
+function updateInviteStatusUI() {
+  const code = getInviteCode();
+  const statusEl = document.getElementById('diag-invite-status');
+  const statusText = document.getElementById('invite-status-text');
+  const setInviteInput = document.getElementById('set-invite-code');
+  if (setInviteInput) {
+    setInviteInput.value = code;
   }
   if (statusText) {
-    if (pin) {
-      statusText.textContent = '🔒 مشفر بـ PIN شخصي (مفعل)';
+    if (brokerMode === 'local') {
+      statusText.textContent = '🖥️ وضع التشغيل المحلي (Localhost)';
+      if (statusEl) statusEl.style.color = 'var(--navy)';
+    } else if (code) {
+      statusText.textContent = '🔑 كود الدعوة مفعل (جاهز للتشخيص)';
       if (statusEl) statusEl.style.color = 'var(--green)';
     } else {
-      statusText.textContent = '⚠️ رمز PIN غير معين (التشخيص معطل)';
+      statusText.textContent = '⚠️ كود الدعوة غير معين (أدخل الكود للمتابعة)';
       if (statusEl) statusEl.style.color = 'var(--coral)';
     }
   }
 }
 
-async function derivePinKeys(pin) {
-  const enc = new TextEncoder();
-  const baseKey = await crypto.subtle.importKey(
-    "raw",
-    enc.encode(pin),
-    { name: "PBKDF2" },
-    false,
-    ["deriveKey"]
-  );
-
-  const aesKey = await crypto.subtle.deriveKey(
-    {
-      name: "PBKDF2",
-      salt: enc.encode("cairo_aes_enc_salt_2026"),
-      iterations: 100000,
-      hash: "SHA-256"
-    },
-    baseKey,
-    { name: "AES-GCM", length: 256 },
-    false,
-    ["encrypt", "decrypt"]
-  );
-
-  const hmacKey = await crypto.subtle.deriveKey(
-    {
-      name: "PBKDF2",
-      salt: enc.encode("cairo_hmac_sig_salt_2026"),
-      iterations: 100000,
-      hash: "SHA-256"
-    },
-    baseKey,
-    { name: "HMAC", hash: { name: "SHA-256" }, length: 256 },
-    false,
-    ["sign", "verify"]
-  );
-
-  return { aesKey, hmacKey };
-}
-
-function arrayBufferToBase64(buffer) {
-  let binary = '';
-  const bytes = new Uint8Array(buffer);
-  for (let i = 0; i < bytes.byteLength; i++) {
-    binary += String.fromCharCode(bytes[i]);
+function maybePromptInviteOnFirstUse() {
+  if (brokerMode !== 'local' && !getInviteCode() && !invitePromptedOnDiagTab) {
+    invitePromptedOnDiagTab = true;
+    promptInviteModal();
   }
-  return btoa(binary);
 }
 
-function base64ToArrayBuffer(base64) {
-  const binary = atob(base64);
-  const bytes = new Uint8Array(binary.length);
-  for (let i = 0; i < binary.length; i++) {
-    bytes[i] = binary.charCodeAt(i);
+function formatGatewayError(status, errData) {
+  const apiErr = (errData && errData.error) ? errData.error : null;
+  if (apiErr && typeof apiErr.message === 'string' && apiErr.message.trim()) {
+    return apiErr.message.trim();
   }
-  return bytes.buffer;
-}
-
-async function encryptPayloadE2EE(plainText, aesKey) {
-  const enc = new TextEncoder();
-  const iv = crypto.getRandomValues(new Uint8Array(12));
-  const ciphertext = await crypto.subtle.encrypt(
-    { name: "AES-GCM", iv: iv },
-    aesKey,
-    enc.encode(plainText)
-  );
-  return {
-    iv: arrayBufferToBase64(iv),
-    data: arrayBufferToBase64(ciphertext)
-  };
-}
-
-async function decryptPayloadE2EE(ivB64, dataB64, aesKey) {
-  const ivBuffer = base64ToArrayBuffer(ivB64);
-  const dataBuffer = base64ToArrayBuffer(dataB64);
-  const decrypted = await crypto.subtle.decrypt(
-    { name: "AES-GCM", iv: new Uint8Array(ivBuffer) },
-    aesKey,
-    dataBuffer
-  );
-  return new TextDecoder().decode(decrypted);
-}
-
-async function computeHmacSignature(canonicalStr, hmacKey) {
-  const enc = new TextEncoder();
-  const signature = await crypto.subtle.sign("HMAC", hmacKey, enc.encode(canonicalStr));
-  return Array.from(new Uint8Array(signature))
-    .map(b => b.toString(16).padStart(2, '0'))
-    .join('');
+  const code = apiErr && apiErr.code ? apiErr.code : '';
+  if (status === 401 || code === 'UNAUTHORIZED') {
+    return 'كود الدعوة غير صالح أو تم إيقافه. يرجى مراجعة مهندس الصيانة.';
+  }
+  if (status === 400 && code === 'INVALID_MACHINE') {
+    return 'الماكينة المحددة غير مسجلة في قائمة الماكينات المعتمدة.';
+  }
+  if (status === 400 || code === 'INVALID_REQUEST') {
+    return 'صيغة الطلب غير صحيحة أو نص العطل فارغ.';
+  }
+  if (status === 403 || code === 'ORIGIN_FORBIDDEN') {
+    return 'المصدر غير مصرح له بالاتصال بالخدمة.';
+  }
+  if (status === 404 || code === 'JOB_NOT_FOUND') {
+    return 'انتهت صلاحية جلسة التشخيص أو لم يتم العثور عليها.';
+  }
+  if (status === 413 || code === 'PAYLOAD_TOO_LARGE') {
+    return 'حجم النص المُدخل يتجاوز الحد المسموح به (2000 حرف كحد أقصى).';
+  }
+  if (status === 429) {
+    if (code === 'RATE_LIMIT_GLOBAL') {
+      return 'تم الوصول للحد اليومي الأقصى للنظام. يرجى المحاولة غداً.';
+    }
+    return 'تم تجاوز الحد المسموح من الطلبات لهذا الكود (30 طلباً في الساعة). يرجى المحاولة لاحقاً.';
+  }
+  if (status === 503) {
+    if (code === 'SERVICE_STOPPED') {
+      return 'خدمة التشخيص متوقفة مؤقتاً للصيانة من قِبل الإدارة.';
+    }
+    return 'خادم التشخيص بالمصنع غير متصل حالياً. يرجى تشغيل الخادم المحلي وإعادة المحاولة.';
+  }
+  return `حدث خطأ غير متوقع من الخادم (HTTP ${status || 'Network'}).`;
 }
 
 window.latestDiagMachine = null;
@@ -1516,7 +1477,13 @@ async function initDiagnosticCore() {
   if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
     brokerMode = 'local';
   } else {
-    brokerMode = '4g-relay';
+    brokerMode = 'gateway';
+  }
+  updateInviteStatusUI();
+
+  const diagTab = document.getElementById('t-diag');
+  if (diagTab && diagTab.classList.contains('on')) {
+    maybePromptInviteOnFirstUse();
   }
 
   try {
@@ -1721,10 +1688,10 @@ async function sendQuery() {
   const q = queryInput.value.trim();
   if (!q || !selectedMachine) return;
 
-  if (brokerMode === '4g-relay') {
-    const pin = getDiagnosticPin();
-    if (!pin) {
-      promptPinModal();
+  if (brokerMode !== 'local') {
+    const inviteCode = getInviteCode();
+    if (!inviteCode) {
+      promptInviteModal();
       return;
     }
   }
@@ -1735,13 +1702,13 @@ async function sendQuery() {
   btnSend.disabled = true;
   btnSend.textContent = 'جاري الفحص... ⏳';
 
-  if (brokerMode === '4g-relay') {
-    const pin = getDiagnosticPin();
-    const jobId = 'job_' + Date.now().toString(36) + '_' + Math.random().toString(36).substr(2, 5);
-    currentSessionId = jobId;
+  if (brokerMode !== 'local') {
+    const inviteCode = getInviteCode();
+    const machId = selectedMachine.id || selectedMachine.name;
+    const techName = (typeof S !== 'undefined' && S && S.profile && S.profile.name) ? S.profile.name : 'فني الصيانة';
+    const loadingId = 'loading-' + Date.now();
 
     const loadingDiv = document.createElement('div');
-    const loadingId = 'loading-' + jobId;
     loadingDiv.id = loadingId;
     loadingDiv.className = 'message assistant';
     loadingDiv.style.border = '1px dashed var(--coral)';
@@ -1750,162 +1717,95 @@ async function sendQuery() {
         <span>⏳</span>
         <div>
           <b style="color: var(--navy);">جاري استخراج البيانات الفنية...</b><br>
-          <span id="load-status-${jobId}" style="font-size: 11.5px; color: var(--muted);">مطابقة كود العطل ومراجعة خطوات الإصلاح المعتمدة</span>
+          <span id="load-status-${loadingId}" style="font-size: 11.5px; color: var(--muted);">جاري الاتصال بخادم الصيانة ومراجعة الكتالوج...</span>
         </div>
       </div>
     `;
     messagesArea.appendChild(loadingDiv);
     messagesArea.scrollTop = messagesArea.scrollHeight;
 
-    const statusUpdates = [
-      setTimeout(() => {
-        const s = document.getElementById(`load-status-${jobId}`);
-        if (s) s.textContent = 'مطابقة كود العطل ومراجعة قطع الغيار...';
-      }, 15000)
-    ];
-
-    const resChannel = `${QUEUE_CHANNEL}_res_${jobId}`;
-    let completed = false;
-
-    function handleDone(solution, parts) {
-      if (completed) return;
-      completed = true;
-      statusUpdates.forEach(clearTimeout);
-      if (window._currentES) { window._currentES.close(); window._currentES = null; }
-      if (window._fallbackTimer) { clearTimeout(window._fallbackTimer); window._fallbackTimer = null; }
+    const cleanupLoading = () => {
       const loadEl = document.getElementById(loadingId);
       if (loadEl) loadEl.remove();
       btnSend.disabled = false;
       btnSend.innerHTML = '<span>فحص العطل</span> 🔍';
-
-      window.latestDiagSolution = solution || '';
-      window.latestDiagParts = parts || [];
-
-      appendMessage('assistant', solution || 'لم يتم العثور على تشخيص مطابق لكود العطل المدخل.', parts);
-    }
-
-    async function extractPayload(item) {
-      if (!item) return null;
-      if (item.attachment && item.attachment.url) {
-        try {
-          const attachRes = await fetch(item.attachment.url);
-          if (attachRes.ok) return await attachRes.json();
-        } catch(e) { console.warn('Error reading attachment:', e); }
-      }
-      if (item.message) {
-        try {
-          return JSON.parse(item.message);
-        } catch(e) {}
-      }
-      return null;
-    }
+    };
 
     try {
-      const { aesKey, hmacKey } = await derivePinKeys(pin);
-      const cipher = await encryptPayloadE2EE(JSON.stringify({ query: q }), aesKey);
-
-      const es = new EventSource(`https://ntfy.sh/${resChannel}/sse`);
-      window._currentES = es;
-      es.onmessage = async (e) => {
-        try {
-          const parsed = JSON.parse(e.data);
-          const inner = await extractPayload(parsed);
-          if (inner && inner.status === 'completed') {
-            let solution = inner.solution;
-            let parts = inner.suggested_parts || [];
-            if (inner.encrypted && inner.cipher) {
-              try {
-                const decText = await decryptPayloadE2EE(inner.cipher.iv, inner.cipher.data, aesKey);
-                let decJson;
-                try {
-                  decJson = JSON.parse(decText);
-                } catch(pe) {
-                  decJson = { solution: decText, suggested_parts: [] };
-                }
-                solution = decJson.solution || decText;
-                parts = decJson.suggested_parts || [];
-              } catch(decErr) {
-                console.error("Decryption error:", decErr);
-                appendMessage('assistant', '⚠️ تعذر فك تشفير استجابة الخادم: يرجى التحقق من صحة رمز PIN الشخصي.');
-                btnSend.disabled = false;
-                btnSend.innerHTML = '<span>فحص العطل</span> 🔍';
-                return;
-              }
-            }
-            handleDone(solution, parts);
-          }
-        } catch(err) {}
-      };
-
-      const ts = Math.floor(Date.now() / 1000);
-      const nonce = 'n_' + Math.random().toString(36).substring(2, 10) + '_' + ts;
-      const machId = selectedMachine.id || selectedMachine.name;
-      const canonical = `${jobId}:${machId}:${ts}:${nonce}:${cipher.iv}:${cipher.data}`;
-      const sig = await computeHmacSignature(canonical, hmacKey);
-
-      await fetch(`https://ntfy.sh/${QUEUE_CHANNEL}`, {
+      const createRes = await fetch(`${GATEWAY_URL}/v1/job`, {
         method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Invite-Code': inviteCode
+        },
         body: JSON.stringify({
-          job_id: jobId,
           machine_id: machId,
-          technician_name: 'Technician (4G)',
-          status: 'pending',
-          encrypted: true,
-          cipher: {
-            iv: cipher.iv,
-            data: cipher.data
-          },
-          timestamp: ts,
-          nonce: nonce,
-          sig: sig
+          query: q,
+          technician_name: techName
         })
       });
 
-      window._fallbackTimer = setTimeout(async () => {
-        if (completed) return;
-        try {
-          const res = await fetch(`https://ntfy.sh/${resChannel}/json?poll=1&since=all`);
-          if (res.ok) {
-            const text = await res.text();
-            const lines = text.trim().split('\n').filter(Boolean);
-            for (const line of lines) {
-              const item = JSON.parse(line);
-              const inner = await extractPayload(item);
-              if (inner && inner.status === 'completed') {
-                let solution = inner.solution;
-                let parts = inner.suggested_parts || [];
-                if (inner.encrypted && inner.cipher) {
-                  try {
-                    const decText = await decryptPayloadE2EE(inner.cipher.iv, inner.cipher.data, aesKey);
-                    let decJson;
-                    try {
-                      decJson = JSON.parse(decText);
-                    } catch(pe) {
-                      decJson = { solution: decText, suggested_parts: [] };
-                    }
-                    solution = decJson.solution || decText;
-                    parts = decJson.suggested_parts || [];
-                  } catch(decErr) {
-                    console.error("Decryption error in fallback:", decErr);
-                    appendMessage('assistant', '⚠️ تعذر فك تشفير استجابة الخادم: يرجى التحقق من صحة رمز PIN الشخصي.');
-                    break;
-                  }
-                }
-                handleDone(solution, parts);
-                break;
-              }
-            }
-          }
-        } catch(e) {}
-      }, 45000);
+      if (!createRes.ok) {
+        let errData = null;
+        try { errData = await createRes.json(); } catch (_) {}
+        cleanupLoading();
+        appendMessage('assistant', `⚠️ ${formatGatewayError(createRes.status, errData)}`);
+        return;
+      }
 
+      const createData = await createRes.json();
+      const jobId = createData && createData.job_id;
+      if (!jobId) {
+        cleanupLoading();
+        appendMessage('assistant', '⚠️ استجابة غير متوقعة من الوسيط: معرّف المهمة مفقود.');
+        return;
+      }
+      currentSessionId = jobId;
+
+      for (let attempt = 1; attempt <= 2; attempt++) {
+        const statusSpan = document.getElementById(`load-status-${loadingId}`);
+        if (statusSpan) {
+          statusSpan.textContent = attempt === 1
+            ? 'مطابقة كود العطل ومراجعة خطوات الإصلاح المعتمدة...'
+            : 'جاري استكمال البحث في الكتالوج ومطابقة قطع الغيار (المحاولة 2 من 2)...';
+        }
+
+        const pollRes = await fetch(`${GATEWAY_URL}/v1/job/${encodeURIComponent(jobId)}/result?wait=25`, {
+          method: 'GET',
+          headers: {
+            'X-Invite-Code': inviteCode
+          }
+        });
+
+        if (pollRes.status === 200) {
+          const resultData = await pollRes.json();
+          cleanupLoading();
+          const solution = resultData.solution || '';
+          const parts = resultData.suggested_parts || [];
+          window.latestDiagSolution = solution;
+          window.latestDiagParts = parts;
+          appendMessage('assistant', solution || 'لم يتم العثور على تشخيص مطابق لكود العطل المدخل.', parts);
+          return;
+        }
+
+        if (pollRes.status === 202) {
+          if (attempt === 2) {
+            cleanupLoading();
+            appendMessage('assistant', '⏳ استغرق الفحص وقتاً أطول من المعتاد. يرجى المحاولة مرة أخرى بعد لحظات أو التأكد من تشغيل خادم التشخيص بالمصنع.');
+            return;
+          }
+          continue;
+        }
+
+        let errData = null;
+        try { errData = await pollRes.json(); } catch (_) {}
+        cleanupLoading();
+        appendMessage('assistant', `⚠️ ${formatGatewayError(pollRes.status, errData)}`);
+        return;
+      }
     } catch (e) {
-      statusUpdates.forEach(clearTimeout);
-      const loadEl = document.getElementById(loadingId);
-      if (loadEl) loadEl.remove();
-      appendMessage('assistant', `⚠️ حدث خطأ أثناء إرسال الاستفسار: ${e.message}`);
-      btnSend.disabled = false;
-      btnSend.innerHTML = '<span>فحص العطل</span> 🔍';
+      cleanupLoading();
+      appendMessage('assistant', `⚠️ تعذر الاتصال بخدمة التشخيص: ${e.message}`);
     }
   } else {
     try {
@@ -2154,57 +2054,45 @@ if (btnConfirmClose) {
     btnConfirmClose.disabled = true;
     btnConfirmClose.textContent = 'جاري الحفظ والتطهير...';
 
-    if (brokerMode === '4g-relay') {
+    if (brokerMode !== 'local') {
       try {
-        const ts = Math.floor(Date.now() / 1000);
-        const nonce = 'n_cls_' + Math.random().toString(36).substring(2, 10) + '_' + ts;
-        const machId = selectedMachine ? (selectedMachine.id || selectedMachine.name) : '';
-        const notesText = notes || 'تم حل العطل وإغلاق الجلسة بواسطة الفني عبر 4G.';
-        const pin = getDiagnosticPin();
-        let payloadToSend;
-        if (pin) {
-          const { aesKey, hmacKey } = await derivePinKeys(pin);
-          const cipher = await encryptPayloadE2EE(JSON.stringify({ notes: notesText }), aesKey);
-          const canonical = `${currentSessionId}:${machId}:${ts}:${nonce}:${cipher.iv}:${cipher.data}`;
-          const sig = await computeHmacSignature(canonical, hmacKey);
-          payloadToSend = {
-            job_id: currentSessionId,
-            machine_id: machId,
-            status: 'closed',
-            encrypted: true,
-            cipher: {
-              iv: cipher.iv,
-              data: cipher.data
-            },
-            timestamp: ts,
-            nonce: nonce,
-            sig: sig
-          };
-        } else {
-          payloadToSend = {
-            job_id: currentSessionId,
-            machine_id: machId,
-            technician_notes: notesText,
-            status: 'closed',
-            solution: 'Incident resolved.',
-            timestamp: ts,
-            nonce: nonce
-          };
-        }
-
-        await fetch(`https://ntfy.sh/${QUEUE_CHANNEL}_close`, {
+        const inviteCode = getInviteCode();
+        const notesText = notes || 'تم حل العطل وإغلاق الجلسة بواسطة الفني.';
+        const closeRes = await fetch(`${GATEWAY_URL}/v1/job/${encodeURIComponent(currentSessionId)}/close`, {
           method: 'POST',
-          body: JSON.stringify(payloadToSend)
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Invite-Code': inviteCode
+          },
+          body: JSON.stringify({
+            technician_notes: notesText
+          })
         });
-        closeModal.classList.add('hidden');
-        chatSection.classList.add('hidden');
-        archiveBanner.classList.remove('hidden');
-        currentSessionId = null;
+
+        if (closeRes.ok) {
+          closeModal.classList.add('hidden');
+          chatSection.classList.add('hidden');
+          archiveBanner.classList.remove('hidden');
+          currentSessionId = null;
+        } else if (closeRes.status === 404) {
+          // 10-minute TTL already purged the ephemeral job on the gateway
+          let errData = null;
+          try { errData = await closeRes.json(); } catch (_) {}
+          closeModal.classList.add('hidden');
+          chatSection.classList.add('hidden');
+          archiveBanner.classList.remove('hidden');
+          currentSessionId = null;
+          if (typeof toast === 'function') toast(formatGatewayError(404, errData));
+        } else {
+          let errData = null;
+          try { errData = await closeRes.json(); } catch (_) {}
+          alert(formatGatewayError(closeRes.status, errData));
+        }
       } catch(e) {
         alert(`خطأ أثناء إغلاق الجلسة: ${e.message}`);
       } finally {
         btnConfirmClose.disabled = false;
-        btnConfirmClose.textContent = 'تأكيد وحفظ الملخص';
+        btnConfirmClose.textContent = 'تأكيد إغلاق الشات';
       }
     } else {
       try {
@@ -2224,49 +2112,49 @@ if (btnConfirmClose) {
         alert(`خطأ أثناء إغلاق الجلسة: ${e.message}`);
       } finally {
         btnConfirmClose.disabled = false;
-        btnConfirmClose.textContent = 'تأكيد وحفظ الملخص';
+        btnConfirmClose.textContent = 'تأكيد إغلاق الشات';
       }
     }
   });
 }
 
-// PIN Management UI Hooks
-const btnSaveSetPin = document.getElementById('btn-save-set-pin');
-const setDiagPin = document.getElementById('set-diag-pin');
-if (btnSaveSetPin && setDiagPin) {
-  btnSaveSetPin.addEventListener('click', () => {
-    const val = setDiagPin.value.trim();
-    saveDiagnosticPin(val);
-    alert(val ? 'تم حفظ رمز PIN الشخصي بنجاح 🔒' : 'تم مسح رمز PIN الشخصي.');
+// Invite Code Management UI Hooks
+const btnSaveSetInvite = document.getElementById('btn-save-set-invite');
+const setInviteCode = document.getElementById('set-invite-code');
+if (btnSaveSetInvite && setInviteCode) {
+  btnSaveSetInvite.addEventListener('click', () => {
+    const val = setInviteCode.value.trim();
+    saveInviteCode(val);
+    alert(val ? 'تم حفظ كود الدعوة بنجاح 🔑' : 'تم مسح كود الدعوة.');
   });
 }
 
-const btnSaveDiagPin = document.getElementById('btn-save-diag-pin');
-const btnCancelDiagPin = document.getElementById('btn-cancel-diag-pin');
-const diagPinInput = document.getElementById('diag-pin-input');
-const btnEditDiagPin = document.getElementById('btn-edit-diag-pin');
+const btnSaveInvite = document.getElementById('btn-save-invite');
+const btnCancelInvite = document.getElementById('btn-cancel-invite');
+const diagInviteInput = document.getElementById('diag-invite-input');
+const btnEditInviteCode = document.getElementById('btn-edit-invite-code');
 
-if (btnSaveDiagPin && diagPinInput) {
-  btnSaveDiagPin.addEventListener('click', () => {
-    const val = diagPinInput.value.trim();
+if (btnSaveInvite && diagInviteInput) {
+  btnSaveInvite.addEventListener('click', () => {
+    const val = diagInviteInput.value.trim();
     if (!val) {
-      alert('يرجى إدخال رمز PIN للمتابعة.');
+      alert('يرجى إدخال كود الدعوة للمتابعة.');
       return;
     }
-    saveDiagnosticPin(val);
-    closePinModal();
+    saveInviteCode(val);
+    closeInviteModal();
   });
 }
 
-if (btnCancelDiagPin) {
-  btnCancelDiagPin.addEventListener('click', () => {
-    closePinModal();
+if (btnCancelInvite) {
+  btnCancelInvite.addEventListener('click', () => {
+    closeInviteModal();
   });
 }
 
-if (btnEditDiagPin) {
-  btnEditDiagPin.addEventListener('click', () => {
-    openPinModal();
+if (btnEditInviteCode) {
+  btnEditInviteCode.addEventListener('click', () => {
+    openInviteModal();
   });
 }
 
@@ -2296,7 +2184,7 @@ if (btnQuickDiag) {
 
 // Initialize on page load
 initDiagnosticCore();
-updatePinStatusUI();
+updateInviteStatusUI();
 
 </script>
 <script src="examples.js"></script>
