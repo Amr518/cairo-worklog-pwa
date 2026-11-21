@@ -637,6 +637,13 @@ nav{grid-template-columns:repeat(6,1fr)}
     <label>مفتاح OpenAI API</label><input id="aiKey" type="password" autocomplete="off" dir="ltr" placeholder="sk-...">
     <button class="btn ghost block" id="aiSave" style="margin-top:10px">حفظ</button></div>
   <div class="card"><h3>الخصوصية</h3><div class="muted" style="line-height:1.7">كل اللي بتسجله محفوظ على موبايلك بس. التطبيق مالوش خادم (server) ومحدش يقدر يشوف شغلك غير لما إنت تبعت الملف بنفسك. في الوضع العادي الصوت بيتحول لنص عن طريق خدمة موبايلك (Apple أو Google)، فما تقولش أرقام تشغيلات أو أسماء منتجات أو أي معلومة سرية. ملف Excel بيحتوي كمان على نص كلامك الأصلي، فراجعه قبل ما تبعته.</div></div>
+  <div class="card"><h3>رمز الدخول الشخصي للتشخيص (PIN)</h3>
+    <div class="muted" style="line-height:1.7">الرمز السري الشخصي لتشفير استفسارات الأعطال والتحقق من الهوية (E2EE) بين هاتفك ومساعد الصيانة الميداني، لحماية سرية البيانات الهندسية.</div>
+    <label>رمز PIN الشخصي (4-8 أرقام)</label>
+    <div style="display:flex;gap:8px;margin-top:6px;">
+      <input id="set-diag-pin" type="password" autocomplete="off" placeholder="أدخل رمز PIN الشخصي..." style="font-size:15px;letter-spacing:2px;">
+      <button class="btn main" id="btn-save-set-pin" type="button" style="white-space:nowrap;">حفظ الرمز</button>
+    </div></div>
   <button class="btn red block" id="wipe">مسح كل بياناتي من الموبايل</button>
 </section>
 
@@ -644,6 +651,15 @@ nav{grid-template-columns:repeat(6,1fr)}
 <section class="tab" id="t-diag">
   <!-- 1. Machine Selection Card -->
   <div class="card">
+    <!-- PIN Status Bar -->
+    <div style="display:flex;justify-content:space-between;align-items:center;background:#F4F5FA;border:1px solid var(--line);border-radius:10px;padding:8px 12px;margin-bottom:12px;font-size:12.5px;">
+      <div id="diag-pin-status" style="display:flex;align-items:center;gap:6px;font-weight:600;color:var(--navy);">
+        <span>🔒</span>
+        <span id="pin-status-text">جاري فحص حالة PIN...</span>
+      </div>
+      <button type="button" class="btn ghost" id="btn-edit-diag-pin" style="padding:4px 10px;font-size:11.5px;min-height:unset;">تعديل PIN</button>
+    </div>
+
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid var(--line);">
       <h2 style="font-size:15px;font-weight:700;color:var(--navy);margin:0;display:flex;align-items:center;gap:6px;">🏭 اختيار الماكينة</h2>
       <span id="machines-count" class="badge-live">0 ماكينة معتمدة</span>
@@ -756,6 +772,22 @@ nav{grid-template-columns:repeat(6,1fr)}
     <div class="modal-buttons">
       <button id="btn-cancel-modal" class="btn ghost">إلغاء</button>
       <button id="btn-confirm-close" class="btn green">تأكيد إغلاق الشات</button>
+    </div>
+  </div>
+</div>
+
+<!-- PIN Prompt Modal -->
+<div id="pin-prompt-modal" class="modal-overlay hidden">
+  <div class="modal-dialog">
+    <h3 style="margin: 0 0 10px; font-size: 16px; color: var(--navy);">🔐 إدخال رمز المرور الشخصي (PIN)</h3>
+    <p style="font-size: 12.5px; color: var(--muted); margin: 0 0 12px; line-height: 1.6;">
+      لحماية خصوصية وسرية الأعطال الفنية، يتم تشفير كافة الاستفسارات تشفيراً تاماً (E2EE). يرجى إدخال رمز PIN الشخصي الخاص بك للمتابعة.
+    </p>
+    <label for="diag-pin-input" style="margin: 0 0 6px;">رمز PIN الشخصي:</label>
+    <input id="diag-pin-input" type="password" autocomplete="off" placeholder="مثال: 4-8 أرقام..." style="font-size: 16px; letter-spacing: 2px;">
+    <div class="modal-buttons">
+      <button id="btn-cancel-diag-pin" class="btn ghost" type="button">إلغاء</button>
+      <button id="btn-save-diag-pin" class="btn main" type="button">حفظ ومتابعة</button>
     </div>
   </div>
 </div>
@@ -1303,33 +1335,150 @@ let selectedSection = null;
 let brokerMode = '4g-relay';
 
 const QUEUE_CHANNEL = "cairo_tech_pwa_queue_78a1bc49df20";
-const RELAY_SECRET = "servier_cairo_sec_relay_2026";
+const PIN_STORAGE_KEY = 'cairo_tech_diag_pin';
+
+function getDiagnosticPin() {
+  return localStorage.getItem(PIN_STORAGE_KEY) || '';
+}
+
+function saveDiagnosticPin(pin) {
+  if (pin && pin.trim()) {
+    localStorage.setItem(PIN_STORAGE_KEY, pin.trim());
+  } else {
+    localStorage.removeItem(PIN_STORAGE_KEY);
+  }
+  updatePinStatusUI();
+}
+
+function promptPinModal() {
+  const modal = document.getElementById('pin-prompt-modal');
+  const input = document.getElementById('diag-pin-input');
+  if (input) input.value = getDiagnosticPin();
+  if (modal) modal.classList.remove('hidden');
+}
+
+function openPinModal() {
+  promptPinModal();
+}
+
+function closePinModal() {
+  const modal = document.getElementById('pin-prompt-modal');
+  if (modal) modal.classList.add('hidden');
+}
+
+function updatePinStatusUI() {
+  const pin = getDiagnosticPin();
+  const statusEl = document.getElementById('diag-pin-status');
+  const statusText = document.getElementById('pin-status-text');
+  const setPinInput = document.getElementById('set-diag-pin');
+  if (setPinInput) {
+    setPinInput.value = pin;
+  }
+  if (statusText) {
+    if (pin) {
+      statusText.textContent = '🔒 مشفر بـ PIN شخصي (مفعل)';
+      if (statusEl) statusEl.style.color = 'var(--green)';
+    } else {
+      statusText.textContent = '⚠️ رمز PIN غير معين (التشخيص معطل)';
+      if (statusEl) statusEl.style.color = 'var(--coral)';
+    }
+  }
+}
+
+async function derivePinKeys(pin) {
+  const enc = new TextEncoder();
+  const baseKey = await crypto.subtle.importKey(
+    "raw",
+    enc.encode(pin),
+    { name: "PBKDF2" },
+    false,
+    ["deriveKey"]
+  );
+
+  const aesKey = await crypto.subtle.deriveKey(
+    {
+      name: "PBKDF2",
+      salt: enc.encode("cairo_aes_enc_salt_2026"),
+      iterations: 100000,
+      hash: "SHA-256"
+    },
+    baseKey,
+    { name: "AES-GCM", length: 256 },
+    false,
+    ["encrypt", "decrypt"]
+  );
+
+  const hmacKey = await crypto.subtle.deriveKey(
+    {
+      name: "PBKDF2",
+      salt: enc.encode("cairo_hmac_sig_salt_2026"),
+      iterations: 100000,
+      hash: "SHA-256"
+    },
+    baseKey,
+    { name: "HMAC", hash: { name: "SHA-256" }, length: 256 },
+    false,
+    ["sign", "verify"]
+  );
+
+  return { aesKey, hmacKey };
+}
+
+function arrayBufferToBase64(buffer) {
+  let binary = '';
+  const bytes = new Uint8Array(buffer);
+  for (let i = 0; i < bytes.byteLength; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  return btoa(binary);
+}
+
+function base64ToArrayBuffer(base64) {
+  const binary = atob(base64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  return bytes.buffer;
+}
+
+async function encryptPayloadE2EE(plainText, aesKey) {
+  const enc = new TextEncoder();
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const ciphertext = await crypto.subtle.encrypt(
+    { name: "AES-GCM", iv: iv },
+    aesKey,
+    enc.encode(plainText)
+  );
+  return {
+    iv: arrayBufferToBase64(iv),
+    data: arrayBufferToBase64(ciphertext)
+  };
+}
+
+async function decryptPayloadE2EE(ivB64, dataB64, aesKey) {
+  const ivBuffer = base64ToArrayBuffer(ivB64);
+  const dataBuffer = base64ToArrayBuffer(dataB64);
+  const decrypted = await crypto.subtle.decrypt(
+    { name: "AES-GCM", iv: new Uint8Array(ivBuffer) },
+    aesKey,
+    dataBuffer
+  );
+  return new TextDecoder().decode(decrypted);
+}
+
+async function computeHmacSignature(canonicalStr, hmacKey) {
+  const enc = new TextEncoder();
+  const signature = await crypto.subtle.sign("HMAC", hmacKey, enc.encode(canonicalStr));
+  return Array.from(new Uint8Array(signature))
+    .map(b => b.toString(16).padStart(2, '0'))
+    .join('');
+}
 
 window.latestDiagMachine = null;
 window.latestDiagQuery = "";
 window.latestDiagSolution = "";
 window.latestDiagParts = [];
-
-async function computeClientSignature(jobId, machineId, text, timestamp, nonce, secretKey) {
-  try {
-    const enc = new TextEncoder();
-    const key = await crypto.subtle.importKey(
-      "raw",
-      enc.encode(secretKey),
-      { name: "HMAC", hash: { name: "SHA-256" } },
-      false,
-      ["sign"]
-    );
-    const canonical = enc.encode(`${jobId}:${machineId}:${timestamp}:${nonce}:${text}`);
-    const signature = await crypto.subtle.sign("HMAC", key, canonical);
-    return Array.from(new Uint8Array(signature))
-      .map(b => b.toString(16).padStart(2, '0'))
-      .join('');
-  } catch (e) {
-    console.warn("HMAC client sign warning:", e);
-    return "";
-  }
-}
 
 // Diagnostic Elements
 const triggerSite = document.getElementById('trigger-site');
@@ -1572,6 +1721,14 @@ async function sendQuery() {
   const q = queryInput.value.trim();
   if (!q || !selectedMachine) return;
 
+  if (brokerMode === '4g-relay') {
+    const pin = getDiagnosticPin();
+    if (!pin) {
+      promptPinModal();
+      return;
+    }
+  }
+
   window.latestDiagQuery = q;
   appendMessage('user', q);
   queryInput.value = '';
@@ -1579,6 +1736,7 @@ async function sendQuery() {
   btnSend.textContent = 'جاري الفحص... ⏳';
 
   if (brokerMode === '4g-relay') {
+    const pin = getDiagnosticPin();
     const jobId = 'job_' + Date.now().toString(36) + '_' + Math.random().toString(36).substr(2, 5);
     currentSessionId = jobId;
 
@@ -1643,6 +1801,9 @@ async function sendQuery() {
     }
 
     try {
+      const { aesKey, hmacKey } = await derivePinKeys(pin);
+      const cipher = await encryptPayloadE2EE(JSON.stringify({ query: q }), aesKey);
+
       const es = new EventSource(`https://ntfy.sh/${resChannel}/sse`);
       window._currentES = es;
       es.onmessage = async (e) => {
@@ -1650,7 +1811,28 @@ async function sendQuery() {
           const parsed = JSON.parse(e.data);
           const inner = await extractPayload(parsed);
           if (inner && inner.status === 'completed') {
-            handleDone(inner.solution, inner.suggested_parts);
+            let solution = inner.solution;
+            let parts = inner.suggested_parts || [];
+            if (inner.encrypted && inner.cipher) {
+              try {
+                const decText = await decryptPayloadE2EE(inner.cipher.iv, inner.cipher.data, aesKey);
+                let decJson;
+                try {
+                  decJson = JSON.parse(decText);
+                } catch(pe) {
+                  decJson = { solution: decText, suggested_parts: [] };
+                }
+                solution = decJson.solution || decText;
+                parts = decJson.suggested_parts || [];
+              } catch(decErr) {
+                console.error("Decryption error:", decErr);
+                appendMessage('assistant', '⚠️ تعذر فك تشفير استجابة الخادم: يرجى التحقق من صحة رمز PIN الشخصي.');
+                btnSend.disabled = false;
+                btnSend.innerHTML = '<span>فحص العطل</span> 🔍';
+                return;
+              }
+            }
+            handleDone(solution, parts);
           }
         } catch(err) {}
       };
@@ -1658,16 +1840,21 @@ async function sendQuery() {
       const ts = Math.floor(Date.now() / 1000);
       const nonce = 'n_' + Math.random().toString(36).substring(2, 10) + '_' + ts;
       const machId = selectedMachine.id || selectedMachine.name;
-      const sig = await computeClientSignature(jobId, machId, q, ts, nonce, RELAY_SECRET);
+      const canonical = `${jobId}:${machId}:${ts}:${nonce}:${cipher.iv}:${cipher.data}`;
+      const sig = await computeHmacSignature(canonical, hmacKey);
 
       await fetch(`https://ntfy.sh/${QUEUE_CHANNEL}`, {
         method: 'POST',
         body: JSON.stringify({
           job_id: jobId,
           machine_id: machId,
-          query: q,
           technician_name: 'Technician (4G)',
           status: 'pending',
+          encrypted: true,
+          cipher: {
+            iv: cipher.iv,
+            data: cipher.data
+          },
           timestamp: ts,
           nonce: nonce,
           sig: sig
@@ -1685,7 +1872,26 @@ async function sendQuery() {
               const item = JSON.parse(line);
               const inner = await extractPayload(item);
               if (inner && inner.status === 'completed') {
-                handleDone(inner.solution, inner.suggested_parts);
+                let solution = inner.solution;
+                let parts = inner.suggested_parts || [];
+                if (inner.encrypted && inner.cipher) {
+                  try {
+                    const decText = await decryptPayloadE2EE(inner.cipher.iv, inner.cipher.data, aesKey);
+                    let decJson;
+                    try {
+                      decJson = JSON.parse(decText);
+                    } catch(pe) {
+                      decJson = { solution: decText, suggested_parts: [] };
+                    }
+                    solution = decJson.solution || decText;
+                    parts = decJson.suggested_parts || [];
+                  } catch(decErr) {
+                    console.error("Decryption error in fallback:", decErr);
+                    appendMessage('assistant', '⚠️ تعذر فك تشفير استجابة الخادم: يرجى التحقق من صحة رمز PIN الشخصي.');
+                    break;
+                  }
+                }
+                handleDone(solution, parts);
                 break;
               }
             }
@@ -1954,20 +2160,41 @@ if (btnConfirmClose) {
         const nonce = 'n_cls_' + Math.random().toString(36).substring(2, 10) + '_' + ts;
         const machId = selectedMachine ? (selectedMachine.id || selectedMachine.name) : '';
         const notesText = notes || 'تم حل العطل وإغلاق الجلسة بواسطة الفني عبر 4G.';
-        const sig = await computeClientSignature(currentSessionId, machId, notesText, ts, nonce, RELAY_SECRET);
-
-        await fetch(`https://ntfy.sh/${QUEUE_CHANNEL}_close`, {
-          method: 'POST',
-          body: JSON.stringify({
+        const pin = getDiagnosticPin();
+        let payloadToSend;
+        if (pin) {
+          const { aesKey, hmacKey } = await derivePinKeys(pin);
+          const cipher = await encryptPayloadE2EE(JSON.stringify({ notes: notesText }), aesKey);
+          const canonical = `${currentSessionId}:${machId}:${ts}:${nonce}:${cipher.iv}:${cipher.data}`;
+          const sig = await computeHmacSignature(canonical, hmacKey);
+          payloadToSend = {
+            job_id: currentSessionId,
+            machine_id: machId,
+            status: 'closed',
+            encrypted: true,
+            cipher: {
+              iv: cipher.iv,
+              data: cipher.data
+            },
+            timestamp: ts,
+            nonce: nonce,
+            sig: sig
+          };
+        } else {
+          payloadToSend = {
             job_id: currentSessionId,
             machine_id: machId,
             technician_notes: notesText,
             status: 'closed',
             solution: 'Incident resolved.',
             timestamp: ts,
-            nonce: nonce,
-            sig: sig
-          })
+            nonce: nonce
+          };
+        }
+
+        await fetch(`https://ntfy.sh/${QUEUE_CHANNEL}_close`, {
+          method: 'POST',
+          body: JSON.stringify(payloadToSend)
         });
         closeModal.classList.add('hidden');
         chatSection.classList.add('hidden');
@@ -2003,6 +2230,46 @@ if (btnConfirmClose) {
   });
 }
 
+// PIN Management UI Hooks
+const btnSaveSetPin = document.getElementById('btn-save-set-pin');
+const setDiagPin = document.getElementById('set-diag-pin');
+if (btnSaveSetPin && setDiagPin) {
+  btnSaveSetPin.addEventListener('click', () => {
+    const val = setDiagPin.value.trim();
+    saveDiagnosticPin(val);
+    alert(val ? 'تم حفظ رمز PIN الشخصي بنجاح 🔒' : 'تم مسح رمز PIN الشخصي.');
+  });
+}
+
+const btnSaveDiagPin = document.getElementById('btn-save-diag-pin');
+const btnCancelDiagPin = document.getElementById('btn-cancel-diag-pin');
+const diagPinInput = document.getElementById('diag-pin-input');
+const btnEditDiagPin = document.getElementById('btn-edit-diag-pin');
+
+if (btnSaveDiagPin && diagPinInput) {
+  btnSaveDiagPin.addEventListener('click', () => {
+    const val = diagPinInput.value.trim();
+    if (!val) {
+      alert('يرجى إدخال رمز PIN للمتابعة.');
+      return;
+    }
+    saveDiagnosticPin(val);
+    closePinModal();
+  });
+}
+
+if (btnCancelDiagPin) {
+  btnCancelDiagPin.addEventListener('click', () => {
+    closePinModal();
+  });
+}
+
+if (btnEditDiagPin) {
+  btnEditDiagPin.addEventListener('click', () => {
+    openPinModal();
+  });
+}
+
 // Hook btnQuickDiag in Work-Log tab
 const btnQuickDiag = document.getElementById("btnQuickDiag");
 if (btnQuickDiag) {
@@ -2029,6 +2296,7 @@ if (btnQuickDiag) {
 
 // Initialize on page load
 initDiagnosticCore();
+updatePinStatusUI();
 
 </script>
 <script src="examples.js"></script>
