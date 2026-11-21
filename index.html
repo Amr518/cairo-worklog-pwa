@@ -1966,7 +1966,7 @@ function renderSheetItems() {
   });
 
   if (items.length === 0) {
-    sheetItemsList.innerHTML = `<div style="text-align: center; color: var(--muted); padding: 24px 0; font-size: 13px;">${tr('لا توجد خيارات مطابقة.')}</div>`;
+    sheetItemsList.innerHTML = `<div style="text-align: center; color: var(--muted); padding: 24px 0; font-size: 13px;">${esc(tr('لا توجد خيارات مطابقة.'))}</div>`;
     return;
   }
 
@@ -1976,8 +1976,8 @@ function renderSheetItems() {
     row.className = `sheet-item ${item.selected ? 'selected' : ''}`;
     row.innerHTML = `
       <div>
-        <div>${item.label}</div>
-        ${item.subtext ? `<div style="font-size: 11px; color: var(--muted); margin-top: 2px;">${item.subtext}</div>` : ''}
+        <div>${esc(item.label)}</div>
+        ${item.subtext ? `<div style="font-size: 11px; color: var(--muted); margin-top: 2px;">${esc(item.subtext)}</div>` : ''}
       </div>
       ${item.selected ? '<span class="check">✓</span>' : ''}
     `;
