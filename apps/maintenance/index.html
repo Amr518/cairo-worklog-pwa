@@ -1,0 +1,1299 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>منظومة الصيانة الذكية | Servier Maintenance Core</title>
+    <link rel="manifest" href="manifest.webmanifest">
+    <link rel="apple-touch-icon" href="icon-180.png">
+    <link rel="icon" href="icon-192.png">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="صيانة Servier">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#242269">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https://ntfy.sh http://127.0.0.1:8098 http://localhost:8098;">
+    <style>
+        :root {
+            --navy: #242269;
+            --coral: #F55B41;
+            --green: #91C361;
+            --blue: #323C8E;
+            --purple: #9B7DCD;
+            --gold: #FDC300;
+            --lblue: #D3DEF2;
+            --cyan: #47BFD9;
+            --alt: #F4F5FA;
+            --line: #dfe2ec;
+            --ink: #1d1d2b;
+            --muted: #6b6f86;
+            --red: #D9534F;
+        }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        html, body { margin: 0; min-height: 100%; }
+        
+        body {
+            font-family: "Century Gothic", "CenturyGothic", "AppleGothic", "Futura", "Segoe UI", Tahoma, sans-serif;
+            background: var(--alt);
+            color: var(--ink);
+            font-size: 15px;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+
+        header {
+            background: var(--navy);
+            color: #fff;
+            padding: calc(10px + env(safe-area-inset-top)) 16px 10px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            border-top: 5px solid var(--coral);
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            box-shadow: 0 2px 10px rgba(36, 34, 105, 0.15);
+        }
+        header h1 {
+            font-size: 17px;
+            margin: 0;
+            flex: 1;
+            font-weight: 700;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            color: #fff;
+        }
+        header small {
+            display: block;
+            font-size: 11.5px;
+            color: var(--lblue);
+            font-weight: 400;
+        }
+        header img {
+            height: 24px;
+            width: auto;
+            display: block;
+        }
+
+        main {
+            flex: 1;
+            max-width: 720px;
+            width: 100%;
+            margin: 0 auto;
+            padding: 14px 14px calc(32px + env(safe-area-inset-bottom));
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .card {
+            background: #fff;
+            border: 1px solid var(--line);
+            border-radius: 14px;
+            padding: 14px;
+            box-shadow: 0 2px 8px rgba(36, 34, 105, 0.04);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid var(--line);
+        }
+
+        .card-title {
+            font-size: 15px;
+            font-weight: 700;
+            color: var(--navy);
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .badge-live {
+            background: var(--lblue);
+            color: var(--navy);
+            border: 1px solid rgba(50, 60, 142, 0.2);
+            font-size: 11px;
+            padding: 3px 10px;
+            border-radius: 10px;
+            font-weight: 700;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+        @media (max-width: 540px) {
+            .form-row { grid-template-columns: 1fr; }
+        }
+
+        .select-group {
+            margin-bottom: 12px;
+        }
+        .select-group:last-child {
+            margin-bottom: 0;
+        }
+
+        label {
+            display: block;
+            font-size: 13px;
+            color: var(--navy);
+            margin-bottom: 6px;
+            font-weight: 700;
+        }
+
+        /* Custom Mobile Select Trigger */
+        .custom-select-trigger {
+            background: #fff;
+            border: 1px solid #c5cbe0;
+            border-radius: 10px;
+            padding: 11px 13px;
+            color: var(--ink);
+            font-size: 14.5px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            user-select: none;
+            transition: all 0.15s ease;
+            box-shadow: 0 1px 2px rgba(36, 34, 105, 0.04);
+        }
+        .custom-select-trigger:active {
+            border-color: var(--coral);
+            background: var(--alt);
+        }
+        .custom-select-trigger.disabled {
+            opacity: 0.45;
+            cursor: not-allowed;
+            background: #f8f9fa;
+            border-color: var(--line);
+        }
+        .custom-select-trigger .arrow {
+            color: var(--muted);
+            font-size: 12px;
+            margin-right: 6px;
+        }
+
+        /* Machine Details Box */
+        .machine-info {
+            background: #fff;
+            border: 1px solid var(--line);
+            border-inline-start: 5px solid var(--coral);
+            border-radius: 12px;
+            padding: 12px 14px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 14px;
+        }
+        .info-cell b {
+            display: block;
+            font-size: 11px;
+            color: var(--muted);
+            margin-bottom: 2px;
+            font-weight: 700;
+        }
+        .info-cell span {
+            font-size: 13.5px;
+            font-weight: 700;
+            color: var(--navy);
+            word-break: break-all;
+        }
+
+        /* Chat Console */
+        .chat-container {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            flex: 1;
+        }
+        .messages-area {
+            background: var(--alt);
+            border: 1px solid var(--line);
+            border-radius: 12px;
+            padding: 12px;
+            min-height: 250px;
+            max-height: 60vh;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .message {
+            max-width: 95%;
+            padding: 12px 14px;
+            border-radius: 14px;
+            font-size: 14px;
+            line-height: 1.6;
+            word-wrap: break-word;
+        }
+        .message.user {
+            align-self: flex-start;
+            background: var(--navy);
+            color: #fff;
+            border-bottom-right-radius: 4px;
+        }
+        .message.assistant {
+            align-self: flex-end;
+            background: #fff;
+            color: var(--ink);
+            border: 1px solid var(--line);
+            border-inline-start: 4px solid var(--coral);
+            border-bottom-left-radius: 4px;
+            box-shadow: 0 1px 4px rgba(36, 34, 105, 0.05);
+        }
+        .message .msg-meta {
+            font-size: 10.5px;
+            color: var(--muted);
+            margin-top: 4px;
+            text-align: left;
+        }
+
+        .parts-grid {
+            margin-top: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .part-card {
+            background: #fff;
+            border: 1px solid var(--line);
+            border-radius: 10px;
+            padding: 9px 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+            text-align: right;
+        }
+        .part-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 8px;
+        }
+        .part-title {
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--navy);
+            line-height: 1.35;
+            flex: 1;
+        }
+        .part-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px 12px;
+            font-size: 11.5px;
+            color: var(--ink);
+            padding-top: 4px;
+            border-top: 1px dashed rgba(223, 226, 236, 0.8);
+        }
+        .part-meta-item {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .part-meta-item b {
+            color: var(--navy);
+            font-weight: 700;
+        }
+        .part-role {
+            font-size: 11px;
+            color: var(--muted);
+            line-height: 1.35;
+            background: var(--alt);
+            padding: 4px 8px;
+            border-radius: 6px;
+        }
+        .stock-tag {
+            font-size: 10.5px;
+            padding: 2.5px 8px;
+            border-radius: 6px;
+            font-weight: 700;
+            white-space: nowrap;
+        }
+        .stock-tag.in { background: #EBF1DE; color: #4F6228; border: 1px solid #C4D9A0; }
+        .stock-tag.out { background: #FDE9D9; color: var(--red); border: 1px solid #F8CBB0; }
+        .stock-tag.none { background: var(--alt); color: var(--muted); border: 1px solid var(--line); }
+
+        /* Input Controls */
+        .chat-input-bar {
+            display: flex;
+            gap: 8px;
+        }
+        .chat-input-bar input {
+            flex: 1;
+            background: #fff;
+            border: 1px solid #c5cbe0;
+            border-radius: 10px;
+            padding: 11px 13px;
+            color: var(--ink);
+            font-size: 14.5px;
+            font-family: inherit;
+        }
+        .chat-input-bar input:focus {
+            outline: none;
+            border-color: var(--navy);
+            box-shadow: 0 0 0 2px rgba(36, 34, 105, 0.12);
+        }
+
+        .btn {
+            border: 0;
+            border-radius: 12px;
+            padding: 11px 16px;
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            transition: all 0.15s ease;
+        }
+        .btn.main { background: var(--coral); color: #fff; }
+        .btn.navy { background: var(--navy); color: #fff; }
+        .btn.ghost { background: #fff; color: var(--navy); border: 1px solid #c5cbe0; }
+        .btn.green { background: var(--green); color: #fff; }
+        .btn:hover { opacity: 0.92; }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        .session-actions {
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            padding-top: 6px;
+        }
+
+        /* Modal Overlay */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(20, 20, 60, 0.55);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 50;
+            padding: 16px;
+        }
+        .modal {
+            background: #fff;
+            border: 1px solid var(--line);
+            border-radius: 18px;
+            max-width: 480px;
+            width: 100%;
+            padding: 18px;
+            box-shadow: 0 10px 30px rgba(20, 20, 60, 0.2);
+        }
+        .modal h3 {
+            margin: 0 0 10px;
+            font-size: 16px;
+            color: var(--navy);
+        }
+        .modal textarea {
+            width: 100%;
+            background: #fff;
+            border: 1px solid #c5cbe0;
+            border-radius: 8px;
+            padding: 10px 12px;
+            color: var(--ink);
+            font-size: 14px;
+            font-family: inherit;
+        }
+        .modal textarea:focus {
+            outline: none;
+            border-color: var(--navy);
+        }
+        .modal-buttons {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 14px;
+        }
+
+        /* Themed Mobile Bottom Sheet Picker Component (Servier Identity) */
+        .sheet-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(20, 20, 60, 0.55);
+            backdrop-filter: blur(2px);
+            -webkit-backdrop-filter: blur(2px);
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+            animation: fadeIn 0.15s ease;
+        }
+        .sheet-container {
+            background: #fff;
+            border-radius: 18px 18px 0 0;
+            border-top: 5px solid var(--coral);
+            max-height: 82vh;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 -8px 24px rgba(20, 20, 60, 0.25);
+            animation: slideUp 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        @keyframes slideUp {
+            from { transform: translateY(100%); }
+            to { transform: translateY(0); }
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        .sheet-handle {
+            width: 38px;
+            height: 4px;
+            background: #c5cbe0;
+            border-radius: 999px;
+            margin: 10px auto 4px;
+        }
+        .sheet-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--line);
+        }
+        .sheet-title {
+            font-size: 15px;
+            font-weight: 700;
+            color: var(--navy);
+            margin: 0;
+        }
+        .sheet-close {
+            background: var(--alt);
+            border: 1px solid var(--line);
+            color: var(--muted);
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            cursor: pointer;
+        }
+        .sheet-search {
+            padding: 10px 14px;
+            border-bottom: 1px solid var(--line);
+            background: var(--alt);
+        }
+        .sheet-search input {
+            width: 100%;
+            background: #fff;
+            border: 1px solid #c5cbe0;
+            border-radius: 8px;
+            padding: 9px 12px;
+            color: var(--ink);
+            font-size: 14px;
+            font-family: inherit;
+        }
+        .sheet-search input:focus {
+            outline: none;
+            border-color: var(--navy);
+        }
+        .sheet-body {
+            overflow-y: auto;
+            padding: 6px 10px 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            -webkit-overflow-scrolling: touch;
+        }
+        .sheet-item {
+            padding: 12px 14px;
+            border-radius: 10px;
+            color: var(--ink);
+            font-size: 14px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            background: transparent;
+            border-bottom: 1px solid rgba(223, 226, 236, 0.6);
+            transition: background 0.1s ease;
+        }
+        .sheet-item:active {
+            background: var(--alt);
+        }
+        .sheet-item.selected {
+            background: var(--lblue);
+            color: var(--navy);
+            font-weight: 700;
+        }
+        .sheet-item .check {
+            color: var(--coral);
+            font-weight: 700;
+            font-size: 15px;
+        }
+
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>منظومة الصيانة الذكية<small id="who">Servier Egypt</small></h1>
+        <img src="logo-white.png" alt="Servier" style="height:24px;width:auto">
+    </header>
+
+    <main>
+        <!-- 1. Machine Selection Card -->
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title">🏭 اختيار الماكينة</h2>
+                <span id="machines-count" class="badge-live">0 ماكينة</span>
+            </div>
+            
+            <div class="form-row">
+                <div class="select-group">
+                    <label>الموقع (Site):</label>
+                    <div class="custom-select-trigger" id="trigger-site">
+                        <span id="text-site">-- اختر الموقع --</span>
+                        <span class="arrow">▾</span>
+                    </div>
+                </div>
+                <div class="select-group">
+                    <label>القسم (Section / Line):</label>
+                    <div class="custom-select-trigger disabled" id="trigger-section">
+                        <span id="text-section">-- اختر القسم أولاً --</span>
+                        <span class="arrow">▾</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="select-group">
+                <label>الماكينة المستهدفة:</label>
+                <div class="custom-select-trigger disabled" id="trigger-machine">
+                    <span id="text-machine">-- اختر الماكينة للتشخيص --</span>
+                    <span class="arrow">▾</span>
+                </div>
+            </div>
+
+            <div id="machine-details" class="machine-info hidden">
+                <div class="info-cell">
+                    <b>كود الماكينة (ID)</b>
+                    <span id="det-id">-</span>
+                </div>
+                <div class="info-cell">
+                    <b>كود JDE</b>
+                    <span id="det-jde">-</span>
+                </div>
+                <div class="info-cell">
+                    <b>الموديل / المُصنع</b>
+                    <span id="det-model">-</span>
+                </div>
+                <div class="info-cell">
+                    <b>الغرفة</b>
+                    <span id="det-room">-</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 2. Diagnostic & Ephemeral Chat Card -->
+        <div id="chat-section" class="card chat-container hidden">
+            <div class="card-header">
+                <h2 class="card-title">💬 Diagnostic Chat</h2>
+                <span id="session-status" class="badge-live">Active 🟢</span>
+            </div>
+            <div id="messages-area" class="messages-area">
+                <div class="message assistant">
+                    أدخل كود العطل أو الإنذار لبدء الفحص الفني.
+                </div>
+            </div>
+
+            <div class="chat-input-bar">
+                <input type="text" id="query-input" placeholder="اكتب كود العطل أو الإنذار (مثال: 501, heating, sensor)..." />
+                <button id="btn-send" class="btn main">
+                    <span>فحص العطل</span> 🔍
+                </button>
+            </div>
+
+            <div class="session-actions">
+                <button id="btn-open-close-modal" class="btn green" style="padding: 7px 14px; font-size: 13px;">
+                    ✅ تم حل العطل وإغلاق الشات
+                </button>
+            </div>
+        </div>
+
+        <!-- 3. Closed Session Banner -->
+        <div id="archive-banner" class="card hidden" style="border-color: var(--green); background: #F5FAEE; border-inline-start: 5px solid var(--green); padding: 12px 14px; text-align: center;">
+            <div style="color: #4F6228; font-size: 14px; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 6px;">
+                <span>✅</span>
+                <span>تم اغلاق الشات</span>
+            </div>
+        </div>
+    </main>
+
+    <!-- Close Session Modal -->
+    <div id="close-modal" class="modal-overlay hidden">
+        <div class="modal">
+            <h3>اعتماد الحل وإغلاق الجلسة</h3>
+            <p style="font-size: 12.5px; color: var(--muted); margin: 0 0 10px;">
+                سيتم حفظ ملخص الصيانة في سجل الماكينة وإنهاء الجلسة.
+            </p>
+            <label for="close-notes">ملاحظات وإجراءات الصيانة (اختياري):</label>
+            <textarea id="close-notes" rows="3" placeholder="مثال: تم تنظيف الحساس وتغيير الريلاي واشتغلت الماكينة طبيعي..."></textarea>
+            <div class="modal-buttons">
+                <button id="btn-cancel-modal" class="btn ghost">إلغاء</button>
+                <button id="btn-confirm-close" class="btn green">تأكيد إغلاق الشات</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Themed Mobile Bottom Sheet Picker Component -->
+    <div id="picker-sheet-overlay" class="sheet-overlay hidden">
+        <div class="sheet-container">
+            <div class="sheet-handle"></div>
+            <div class="sheet-header">
+                <h3 class="sheet-title" id="sheet-title">اختر</h3>
+                <button type="button" class="sheet-close" id="sheet-close-btn">✕</button>
+            </div>
+            <div class="sheet-search hidden" id="sheet-search-box">
+                <input type="text" id="sheet-search-input" placeholder="🔍 تصفية في القائمة..." autocomplete="off" />
+            </div>
+            <div class="sheet-body" id="sheet-items-list">
+                <!-- Populated dynamically -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let allMachines = [];
+        let sectionsBySite = {};
+        let currentSessionId = null;
+        let selectedMachine = null;
+        let selectedSite = null;
+        let selectedSection = null;
+        let brokerMode = '4g-relay';
+
+        const QUEUE_CHANNEL = "cairo_tech_pwa_queue_78a1bc49df20";
+        const RELAY_SECRET = "servier_cairo_sec_relay_2026";
+
+        async function computeClientSignature(jobId, machineId, text, timestamp, nonce, secretKey) {
+            try {
+                const enc = new TextEncoder();
+                const key = await crypto.subtle.importKey(
+                    "raw",
+                    enc.encode(secretKey),
+                    { name: "HMAC", hash: { name: "SHA-256" } },
+                    false,
+                    ["sign"]
+                );
+                const canonical = enc.encode(`${jobId}:${machineId}:${timestamp}:${nonce}:${text}`);
+                const signature = await crypto.subtle.sign("HMAC", key, canonical);
+                return Array.from(new Uint8Array(signature))
+                    .map(b => b.toString(16).padStart(2, '0'))
+                    .join('');
+            } catch (e) {
+                console.warn("HMAC client sign warning:", e);
+                return "";
+            }
+        }
+
+        // Elements
+        const triggerSite = document.getElementById('trigger-site');
+        const textSite = document.getElementById('text-site');
+        const triggerSection = document.getElementById('trigger-section');
+        const textSection = document.getElementById('text-section');
+        const triggerMachine = document.getElementById('trigger-machine');
+        const textMachine = document.getElementById('text-machine');
+        const machineDetails = document.getElementById('machine-details');
+        const machinesCountEl = document.getElementById('machines-count');
+
+        const chatSection = document.getElementById('chat-section');
+        const messagesArea = document.getElementById('messages-area');
+        const queryInput = document.getElementById('query-input');
+        const btnSend = document.getElementById('btn-send');
+        const btnOpenCloseModal = document.getElementById('btn-open-close-modal');
+        const closeModal = document.getElementById('close-modal');
+        const btnCancelModal = document.getElementById('btn-cancel-modal');
+        const btnConfirmClose = document.getElementById('btn-confirm-close');
+        const closeNotes = document.getElementById('close-notes');
+        const archiveBanner = document.getElementById('archive-banner');
+
+        // Sheet Picker Elements
+        const sheetOverlay = document.getElementById('picker-sheet-overlay');
+        const sheetTitle = document.getElementById('sheet-title');
+        const sheetCloseBtn = document.getElementById('sheet-close-btn');
+        const sheetSearchBox = document.getElementById('sheet-search-box');
+        const sheetSearchInput = document.getElementById('sheet-search-input');
+        const sheetItemsList = document.getElementById('sheet-items-list');
+
+        let currentPickerType = null;
+        let currentRawItems = [];
+
+        // 1. Initialize
+        async function init() {
+            if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+                brokerMode = 'local';
+            } else {
+                brokerMode = '4g-relay';
+            }
+
+            try {
+                let data = null;
+                try {
+                    const res = await fetch('./machines.json');
+                    if (res.ok) {
+                        const staticMachines = await res.json();
+                        const sections = { ACACIA: new Set(), PALMIER: new Set() };
+                        staticMachines.forEach(m => {
+                            const b = (m.building || '').toUpperCase();
+                            if (sections[b]) {
+                                sections[b].add(m.section || m.area || 'عام');
+                            }
+                        });
+                        data = {
+                            machines: staticMachines,
+                            sections_by_site: {
+                                ACACIA: Array.from(sections.ACACIA),
+                                PALMIER: Array.from(sections.PALMIER)
+                            }
+                        };
+                    }
+                } catch(e) {}
+
+                if (!data && brokerMode === 'local') {
+                    const res = await fetch('/api/machines');
+                    if (res.ok) data = await res.json();
+                }
+
+                allMachines = data ? (data.machines || []) : [];
+                sectionsBySite = data ? (data.sections_by_site || {}) : {};
+                if (machinesCountEl) {
+                    machinesCountEl.textContent = `${allMachines.length} ماكينة معتمدة`;
+                }
+            } catch (e) {
+                console.warn('Init error:', e);
+            }
+        }
+
+        // 2. Custom Themed Bottom Sheet Picker Logic
+        function openPicker(type) {
+            currentPickerType = type;
+            sheetSearchInput.value = '';
+            
+            if (type === 'site') {
+                sheetTitle.textContent = '🏢 اختر الموقع';
+                sheetSearchBox.classList.add('hidden');
+                currentRawItems = [
+                    { value: 'ACACIA', label: 'مبنى الأكاسيا (ACACIA)', selected: selectedSite === 'ACACIA' },
+                    { value: 'PALMIER', label: 'مبنى البالميي (PALMIER)', selected: selectedSite === 'PALMIER' }
+                ];
+            } else if (type === 'section') {
+                if (!selectedSite || !sectionsBySite[selectedSite]) return;
+                sheetTitle.textContent = '📍 اختر القسم';
+                sheetSearchBox.classList.add('hidden');
+                currentRawItems = sectionsBySite[selectedSite].map(sec => ({
+                    value: sec,
+                    label: sec,
+                    selected: selectedSection === sec
+                }));
+            } else if (type === 'machine') {
+                if (!selectedSite || !selectedSection) return;
+                sheetTitle.textContent = '⚙️ اختر الماكينة';
+                sheetSearchBox.classList.remove('hidden');
+
+                const filtered = allMachines.filter(m => {
+                    const bldMatch = (m.building || '').toUpperCase() === selectedSite;
+                    const secMatch = (m.section || '').toLowerCase() === selectedSection.toLowerCase() || (m.area || '').toLowerCase() === selectedSection.toLowerCase();
+                    return bldMatch && secMatch;
+                });
+
+                currentRawItems = filtered.map(m => {
+                    const name = m.display_name || m.id;
+                    const sub = `${m.manufacturer || ''} ${m.model || ''}`.trim();
+                    return {
+                        value: m.id,
+                        label: name,
+                        subtext: sub || (m.room_no ? `غرفة ${m.room_no}` : ''),
+                        selected: selectedMachine && selectedMachine.id === m.id
+                    };
+                });
+            }
+
+            renderSheetItems();
+            sheetOverlay.classList.remove('hidden');
+            if (!sheetSearchBox.classList.contains('hidden')) {
+                setTimeout(() => sheetSearchInput.focus(), 200);
+            }
+        }
+
+        function renderSheetItems() {
+            const query = (sheetSearchInput.value || '').trim().toLowerCase();
+            const items = currentRawItems.filter(item => {
+                if (!query) return true;
+                const matchLabel = item.label.toLowerCase().includes(query);
+                const matchSub = (item.subtext || '').toLowerCase().includes(query);
+                return matchLabel || matchSub;
+            });
+
+            if (items.length === 0) {
+                sheetItemsList.innerHTML = '<div style="text-align: center; color: var(--muted); padding: 24px 0; font-size: 13px;">لا توجد خيارات مطابقة.</div>';
+                return;
+            }
+
+            sheetItemsList.innerHTML = '';
+            items.forEach(item => {
+                const row = document.createElement('div');
+                row.className = `sheet-item ${item.selected ? 'selected' : ''}`;
+                row.innerHTML = `
+                    <div>
+                        <div>${item.label}</div>
+                        ${item.subtext ? `<div style="font-size: 11px; color: var(--muted); margin-top: 2px;">${item.subtext}</div>` : ''}
+                    </div>
+                    ${item.selected ? '<span class="check">✓</span>' : ''}
+                `;
+                row.addEventListener('click', () => {
+                    onPickerItemSelected(item.value, item.label);
+                });
+                sheetItemsList.appendChild(row);
+            });
+        }
+
+        function closePicker() {
+            sheetOverlay.classList.add('hidden');
+        }
+
+        sheetCloseBtn.addEventListener('click', closePicker);
+        sheetOverlay.addEventListener('click', (e) => {
+            if (e.target === sheetOverlay) closePicker();
+        });
+        sheetSearchInput.addEventListener('input', renderSheetItems);
+
+        function onPickerItemSelected(val, label) {
+            closePicker();
+
+            if (currentPickerType === 'site') {
+                selectedSite = val;
+                textSite.textContent = label;
+                
+                // Reset Section & Machine
+                selectedSection = null;
+                selectedMachine = null;
+                textSection.textContent = '-- اختر القسم --';
+                triggerSection.classList.remove('disabled');
+
+                textMachine.textContent = '-- اختر الماكينة للتشخيص --';
+                triggerMachine.classList.add('disabled');
+
+                machineDetails.classList.add('hidden');
+                chatSection.classList.add('hidden');
+
+            } else if (currentPickerType === 'section') {
+                selectedSection = val;
+                textSection.textContent = label;
+
+                // Reset Machine
+                selectedMachine = null;
+                textMachine.textContent = '-- اختر الماكينة للتشخيص --';
+                triggerMachine.classList.remove('disabled');
+
+                machineDetails.classList.add('hidden');
+                chatSection.classList.add('hidden');
+
+            } else if (currentPickerType === 'machine') {
+                selectedMachine = allMachines.find(m => m.id === val);
+                if (selectedMachine) {
+                    textMachine.textContent = selectedMachine.display_name || selectedMachine.id;
+
+                    document.getElementById('det-id').textContent = selectedMachine.id;
+                    document.getElementById('det-jde').textContent = selectedMachine.jde_code || 'N/A';
+                    document.getElementById('det-model').textContent = `${selectedMachine.manufacturer || ''} ${selectedMachine.model || ''}`.trim() || 'N/A';
+                    document.getElementById('det-room').textContent = selectedMachine.room_no || 'N/A';
+                    machineDetails.classList.remove('hidden');
+
+                    // Reset chat
+                    currentSessionId = null;
+                    messagesArea.innerHTML = `
+                        <div class="message assistant">
+                            أدخل كود العطل أو الإنذار لماكينة <b>${selectedMachine.display_name || selectedMachine.id}</b>.
+                        </div>
+                    `;
+                    chatSection.classList.remove('hidden');
+                    archiveBanner.classList.add('hidden');
+
+                    // Smooth scroll to chat
+                    setTimeout(() => {
+                        chatSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                    }, 200);
+                }
+            }
+        }
+
+        // Trigger clicks
+        triggerSite.addEventListener('click', () => openPicker('site'));
+        triggerSection.addEventListener('click', () => {
+            if (!triggerSection.classList.contains('disabled')) openPicker('section');
+        });
+        triggerMachine.addEventListener('click', () => {
+            if (!triggerMachine.classList.contains('disabled')) openPicker('machine');
+        });
+
+        // 3. Send query
+        async function sendQuery() {
+            const q = queryInput.value.trim();
+            if (!q || !selectedMachine) return;
+
+            appendMessage('user', q);
+            queryInput.value = '';
+            btnSend.disabled = true;
+            btnSend.textContent = 'جاري الفحص... ⏳';
+
+            if (brokerMode === '4g-relay') {
+                const jobId = 'job_' + Date.now().toString(36) + '_' + Math.random().toString(36).substr(2, 5);
+                currentSessionId = jobId;
+
+                const loadingDiv = document.createElement('div');
+                const loadingId = 'loading-' + jobId;
+                loadingDiv.id = loadingId;
+                loadingDiv.className = 'message assistant';
+                loadingDiv.style.border = '1px dashed var(--coral)';
+                loadingDiv.innerHTML = `
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <span>⏳</span>
+                        <div>
+                            <b style="color: var(--navy);">جاري استخراج البيانات الفنية...</b><br>
+                            <span id="load-status-${jobId}" style="font-size: 11.5px; color: var(--muted);">مطابقة كود العطل ومراجعة خطوات الإصلاح المعتمدة</span>
+                        </div>
+                    </div>
+                `;
+                messagesArea.appendChild(loadingDiv);
+                messagesArea.scrollTop = messagesArea.scrollHeight;
+
+                const statusUpdates = [
+                    setTimeout(() => {
+                        const s = document.getElementById(`load-status-${jobId}`);
+                        if (s) s.textContent = 'مطابقة كود العطل ومراجعة قطع الغيار...';
+                    }, 15000)
+                ];
+
+                const resChannel = `${QUEUE_CHANNEL}_res_${jobId}`;
+                let completed = false;
+
+                function handleDone(solution, parts) {
+                    if (completed) return;
+                    completed = true;
+                    statusUpdates.forEach(clearTimeout);
+                    if (window._currentES) { window._currentES.close(); window._currentES = null; }
+                    if (window._fallbackTimer) { clearTimeout(window._fallbackTimer); window._fallbackTimer = null; }
+                    const loadEl = document.getElementById(loadingId);
+                    if (loadEl) loadEl.remove();
+                    btnSend.disabled = false;
+                    btnSend.innerHTML = '<span>فحص العطل</span> 🔍';
+                    appendMessage('assistant', solution || 'لم يتم العثور على تشخيص مطابق لكود العطل المدخل.', parts);
+                }
+
+                async function extractPayload(item) {
+                    if (!item) return null;
+                    if (item.attachment && item.attachment.url) {
+                        try {
+                            const attachRes = await fetch(item.attachment.url);
+                            if (attachRes.ok) return await attachRes.json();
+                        } catch(e) { console.warn('Error reading attachment:', e); }
+                    }
+                    if (item.message) {
+                        try {
+                            return JSON.parse(item.message);
+                        } catch(e) {}
+                    }
+                    return null;
+                }
+
+                try {
+                    const es = new EventSource(`https://ntfy.sh/${resChannel}/sse`);
+                    window._currentES = es;
+                    es.onmessage = async (e) => {
+                        try {
+                            const parsed = JSON.parse(e.data);
+                            const inner = await extractPayload(parsed);
+                            if (inner && inner.status === 'completed') {
+                                handleDone(inner.solution, inner.suggested_parts);
+                            }
+                        } catch(err) {}
+                    };
+
+                    const ts = Math.floor(Date.now() / 1000);
+                    const nonce = 'n_' + Math.random().toString(36).substring(2, 10) + '_' + ts;
+                    const sig = await computeClientSignature(jobId, selectedMachine.id, q, ts, nonce, RELAY_SECRET);
+
+                    await fetch(`https://ntfy.sh/${QUEUE_CHANNEL}`, {
+                        method: 'POST',
+                        body: JSON.stringify({
+                            job_id: jobId,
+                            machine_id: selectedMachine.id,
+                            query: q,
+                            technician_name: 'Technician (4G)',
+                            status: 'pending',
+                            timestamp: ts,
+                            nonce: nonce,
+                            sig: sig
+                        })
+                    });
+
+                    window._fallbackTimer = setTimeout(async () => {
+                        if (completed) return;
+                        try {
+                            const res = await fetch(`https://ntfy.sh/${resChannel}/json?poll=1&since=all`);
+                            if (res.ok) {
+                                const text = await res.text();
+                                const lines = text.trim().split('\n').filter(Boolean);
+                                for (const line of lines) {
+                                    const item = JSON.parse(line);
+                                    const inner = await extractPayload(item);
+                                    if (inner && inner.status === 'completed') {
+                                        handleDone(inner.solution, inner.suggested_parts);
+                                        break;
+                                    }
+                                }
+                            }
+                        } catch(e) {}
+                    }, 45000);
+
+                } catch (e) {
+                    statusUpdates.forEach(clearTimeout);
+                    const loadEl = document.getElementById(loadingId);
+                    if (loadEl) loadEl.remove();
+                    appendMessage('assistant', `⚠️ حدث خطأ أثناء إرسال الاستفسار: ${e.message}`);
+                    btnSend.disabled = false;
+                    btnSend.innerHTML = '<span>فحص العطل</span> 🔍';
+                }
+            } else {
+                try {
+                    const res = await fetch('/api/chat/ask', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            machine_id: selectedMachine.id,
+                            query: q,
+                            session_id: currentSessionId,
+                            technician_name: 'Technician PWA',
+                            language: 'ar'
+                        })
+                    });
+
+                    const data = await res.json();
+                    if (data.session_id) {
+                        currentSessionId = data.session_id;
+                    }
+                    appendMessage('assistant', data.solution || 'لم يتم العثور على تشخيص مطابق لكود العطل المدخل.', data.suggested_parts);
+                } catch (e) {
+                    appendMessage('assistant', `⚠️ حدث خطأ أثناء فحص العطل: ${e.message}`);
+                } finally {
+                    btnSend.disabled = false;
+                    btnSend.innerHTML = '<span>فحص العطل</span> 🔍';
+                }
+            }
+        }
+
+        btnSend.addEventListener('click', sendQuery);
+        queryInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') sendQuery();
+        });
+
+        function escapeHtml(str) {
+            return str
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;');
+        }
+
+        function appendMessage(role, text, parts) {
+            const msgDiv = document.createElement('div');
+            msgDiv.className = `message ${role}`;
+            
+            const safe = escapeHtml(text || '');
+            let formatted = safe
+                .replace(/\n/g, '<br>')
+                .replace(/\*\*(.*?)\*\*/g, '<b>$1</b>')
+                .replace(/\*(.*?)\*/g, '<i>$1</i>')
+                .replace(/`([^`]+)`/g, '<code style="background:var(--alt);padding:1px 5px;border-radius:4px;font-family:monospace;font-size:12px;color:var(--navy);border:1px solid var(--line);">$1</code>');
+            msgDiv.innerHTML = formatted;
+
+            if (role === 'assistant' && text && text.length > 80) {
+                const actionRow = document.createElement('div');
+                actionRow.style.marginTop = '10px';
+                actionRow.style.display = 'flex';
+                actionRow.style.gap = '8px';
+                actionRow.style.alignItems = 'center';
+
+                const copyBtn = document.createElement('button');
+                copyBtn.className = 'btn ghost';
+                copyBtn.style.padding = '4px 10px';
+                copyBtn.style.fontSize = '12px';
+                copyBtn.innerHTML = '📋 نسخ البيانات الفنية';
+                copyBtn.onclick = () => {
+                    navigator.clipboard.writeText(text).then(() => {
+                        copyBtn.textContent = '✅ تم النسخ بنجاح!';
+                        setTimeout(() => { copyBtn.innerHTML = '📋 نسخ البيانات الفنية'; }, 2500);
+                    }).catch(() => {
+                        alert('تعذر الوصول للحافظة تلقائياً، يمكنك تحديد النص ونسخه.');
+                    });
+                };
+                actionRow.appendChild(copyBtn);
+                msgDiv.appendChild(actionRow);
+            }
+
+            if (parts && parts.length > 0) {
+                const partsDiv = document.createElement('div');
+                partsDiv.className = 'parts-grid';
+                partsDiv.innerHTML = '<div style="font-size: 12px; font-weight: bold; color: var(--navy); margin-top: 8px; display: flex; align-items: center; gap: 6px;"><span>⚙️</span><span>قطع الغيار والمكونات المرتبطة بالعطل (' + parts.length + '):</span></div>';
+
+                parts.forEach(p => {
+                    const card = document.createElement('div');
+                    card.className = 'part-card';
+
+                    const partName = p.part_name || p.name || p.name_en || 'صنف غير مسمى';
+                    const partCode = p.part_code || p.code || p.code_hint || (p.item_number || 'بدون كود');
+                    const rawQty = (p.qty_on_hand !== undefined && p.qty_on_hand !== null) ? Number(p.qty_on_hand) : (p.qty !== undefined ? Number(p.qty) : 0);
+                    const qty = isNaN(rawQty) ? 0 : rawQty;
+                    const location = (p.location || p.bin || '').trim();
+                    const warehouse = (p.warehouse || p.business_unit || '').trim();
+                    const role = (p.role_ar || p.role || '').trim();
+                    const stockStatus = p.stock_status || (qty > 0 ? 'IN_STOCK' : 'OUT_OF_STOCK');
+
+                    let stockClass = 'out';
+                    let stockLabel = 'غير متوفر';
+                    if (qty > 0 || stockStatus === 'IN_STOCK') {
+                        stockClass = 'in';
+                        stockLabel = 'متوفر';
+                    } else {
+                        stockClass = 'out';
+                        stockLabel = 'غير متوفر';
+                    }
+
+                    let locHtml = '';
+                    if (location && location !== 'غير مدرج') {
+                        const whText = warehouse ? ` <span style="color:var(--muted)">[${escapeHtml(warehouse)}]</span>` : '';
+                        locHtml = `<span class="part-meta-item">📍 البن / الرف: <b style="color:var(--coral); font-family:monospace;">${escapeHtml(location)}</b>${whText}</span>`;
+                    } else {
+                        locHtml = `<span class="part-meta-item" style="color:var(--muted)">📍 المخزن: غير مسجل في الجرد</span>`;
+                    }
+
+                    const roleHtml = role ? `<div class="part-role">💡 <b>الدور الفني:</b> ${escapeHtml(role)}</div>` : '';
+
+                    card.innerHTML = `
+                        <div class="part-header">
+                            <div class="part-title">${escapeHtml(partName)}</div>
+                            <span class="stock-tag ${stockClass}">${stockLabel}</span>
+                        </div>
+                        <div class="part-meta">
+                            <span class="part-meta-item">🔢 رقم القطعة (Part No): <b style="font-family:monospace;letter-spacing:0.5px;">${escapeHtml(partCode)}</b></span>
+                            ${locHtml}
+                        </div>
+                        ${roleHtml}
+                    `;
+                    partsDiv.appendChild(card);
+                });
+                msgDiv.appendChild(partsDiv);
+            }
+
+            const meta = document.createElement('div');
+            meta.className = 'msg-meta';
+            meta.textContent = new Date().toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' });
+            msgDiv.appendChild(meta);
+
+            messagesArea.appendChild(msgDiv);
+            messagesArea.scrollTop = messagesArea.scrollHeight;
+        }
+
+        // 4. Close session
+        btnOpenCloseModal.addEventListener('click', () => {
+            closeNotes.value = '';
+            closeModal.classList.remove('hidden');
+        });
+
+        btnCancelModal.addEventListener('click', () => {
+            closeModal.classList.add('hidden');
+        });
+
+        btnConfirmClose.addEventListener('click', async () => {
+            if (!currentSessionId) {
+                closeModal.classList.add('hidden');
+                chatSection.classList.add('hidden');
+                return;
+            }
+
+            const notes = closeNotes.value.trim();
+            btnConfirmClose.disabled = true;
+            btnConfirmClose.textContent = 'جاري الحفظ والتطهير...';
+
+            if (brokerMode === '4g-relay') {
+                try {
+                    const ts = Math.floor(Date.now() / 1000);
+                    const nonce = 'n_cls_' + Math.random().toString(36).substring(2, 10) + '_' + ts;
+                    const machId = selectedMachine ? selectedMachine.id : '';
+                    const notesText = notes || 'تم حل العطل وإغلاق الجلسة بواسطة الفني عبر 4G.';
+                    const sig = await computeClientSignature(currentSessionId, machId, notesText, ts, nonce, RELAY_SECRET);
+
+                    await fetch(`https://ntfy.sh/${QUEUE_CHANNEL}_close`, {
+                        method: 'POST',
+                        body: JSON.stringify({
+                            job_id: currentSessionId,
+                            machine_id: machId,
+                            technician_notes: notesText,
+                            status: 'closed',
+                            solution: 'Incident resolved.',
+                            timestamp: ts,
+                            nonce: nonce,
+                            sig: sig
+                        })
+                    });
+                    closeModal.classList.add('hidden');
+                    chatSection.classList.add('hidden');
+                    archiveBanner.classList.remove('hidden');
+                    currentSessionId = null;
+                } catch(e) {
+                    alert(`خطأ أثناء إغلاق الجلسة: ${e.message}`);
+                } finally {
+                    btnConfirmClose.disabled = false;
+                    btnConfirmClose.textContent = 'تأكيد وحفظ الملخص';
+                }
+            } else {
+                try {
+                    const res = await fetch('/api/chat/close', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            session_id: currentSessionId,
+                            technician_notes: notes
+                        })
+                    });
+                    const data = await res.json();
+                    closeModal.classList.add('hidden');
+                    chatSection.classList.add('hidden');
+                    archiveBanner.classList.remove('hidden');
+                    currentSessionId = null;
+                } catch (e) {
+                    alert(`خطأ أثناء إغلاق الجلسة: ${e.message}`);
+                } finally {
+                    btnConfirmClose.disabled = false;
+                    btnConfirmClose.textContent = 'تأكيد وحفظ الملخص';
+                }
+            }
+        });
+
+        // 5. Register Service Worker (v8)
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js').then((reg) => {
+                    console.log('SW registered:', reg.scope);
+                }).catch((err) => {
+                    console.warn('SW registration failed:', err);
+                });
+            });
+        }
+
+        init();
+    </script>
+</body>
+</html>

@@ -1,10 +1,77 @@
-const V="wl-unified-v1",CORE=["./","index.html","machines.json","kb.js","coach.js","analysis.js","examples.js","i18n.js","i18n_fr.js","sugg_kb.js","suggest.js","manifest.webmanifest","logo.png","logo-white.png"],EXTRA=["viewer.html","icon-192.png","icon-512.png","icon-180.png"];
-self.addEventListener("install",e=>{e.waitUntil(caches.open(V).then(c=>c.addAll(CORE).then(()=>Promise.allSettled(EXTRA.map(f=>c.add(f))))).then(()=>self.skipWaiting()))});
-self.addEventListener("activate",e=>{e.waitUntil(caches.keys().then(k=>Promise.all(k.filter(x=>x!==V).map(x=>caches.delete(x)))).then(()=>self.clients.claim()))});
-self.addEventListener("fetch",e=>{
-  if(e.request.method!=="GET"||new URL(e.request.url).origin!==location.origin)return;
-  e.respondWith(caches.open(V).then(c=>c.match(e.request,{ignoreSearch:true}).then(hit=>{
-    const net=fetch(e.request,{cache:"no-cache"}).then(r=>{if(r&&r.ok)c.put(e.request,r.clone());return r}).catch(()=>hit);
-    return hit||net;
-  })));
+const CACHE_NAME = "wl-unified-v1";
+
+const CORE_ASSETS = [
+  "./",
+  "index.html",
+  "manifest.webmanifest",
+  "machines.json",
+  "icon-180.png",
+  "icon-192.png",
+  "icon-512.png",
+  "logo-white.png",
+  "logo.png",
+  // Worklog Sub-App (Zero Modification)
+  "apps/worklog/index.html",
+  "apps/worklog/manifest.webmanifest",
+  "apps/worklog/machines.json",
+  "apps/worklog/kb.js",
+  "apps/worklog/coach.js",
+  "apps/worklog/analysis.js",
+  "apps/worklog/examples.js",
+  "apps/worklog/i18n.js",
+  "apps/worklog/i18n_fr.js",
+  "apps/worklog/sugg_kb.js",
+  "apps/worklog/suggest.js",
+  "apps/worklog/viewer.html",
+  "apps/worklog/icon-180.png",
+  "apps/worklog/icon-192.png",
+  "apps/worklog/logo.png",
+  "apps/worklog/logo-white.png",
+  // Maintenance Sub-App (Zero Modification)
+  "apps/maintenance/index.html",
+  "apps/maintenance/manifest.webmanifest",
+  "apps/maintenance/machines.json",
+  "apps/maintenance/icon-180.png",
+  "apps/maintenance/icon-192.png",
+  "apps/maintenance/icon-512.png",
+  "apps/maintenance/logo-white.png"
+];
+
+self.addEventListener("install", (event) => {
+  event.waitUntil(
+    caches.open(CACHE_NAME).then((cache) => {
+      return cache.addAll(CORE_ASSETS).catch((err) => {
+        console.warn("Some offline assets failed to cache:", err);
+      });
+    }).then(() => self.skipWaiting())
+  );
+});
+
+self.addEventListener("activate", (event) => {
+  event.waitUntil(
+    caches.keys().then((keys) =>
+      Promise.all(keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key)))
+    ).then(() => self.clients.claim())
+  );
+});
+
+self.addEventListener("fetch", (event) => {
+  if (event.request.method !== "GET" || new URL(event.request.url).origin !== location.origin) {
+    return;
+  }
+  event.respondWith(
+    caches.open(CACHE_NAME).then((cache) =>
+      cache.match(event.request, { ignoreSearch: true }).then((cachedResponse) => {
+        const fetchPromise = fetch(event.request, { cache: "no-cache" })
+          .then((networkResponse) => {
+            if (networkResponse && networkResponse.ok) {
+              cache.put(event.request, networkResponse.clone());
+            }
+            return networkResponse;
+          })
+          .catch(() => cachedResponse);
+        return cachedResponse || fetchPromise;
+      })
+    )
+  );
 });

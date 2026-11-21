@@ -1,1 +1,31 @@
-{"name":"شغلي | My Work Log","short_name":"شغلي","start_url":"./index.html","scope":"./","display":"standalone","orientation":"portrait","background_color":"#242269","theme_color":"#242269","lang":"ar","dir":"rtl","icons":[{"src":"icon-192.png","sizes":"192x192","type":"image/png"},{"src":"icon-512.png","sizes":"512x512","type":"image/png","purpose":"any maskable"}]}
+{
+  "name": "بوابة صيانة سيرفييه الموحدة | Servier Maintenance & WorkLog",
+  "short_name": "صيانة سيرفييه",
+  "description": "البوابة الموحدة لتسجيل الشغل اليومي وتشخيص أعطال الكتالوجات الذكية بمصنع سيرفييه مصر",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#1c1a4e",
+  "theme_color": "#1c1a4e",
+  "lang": "ar",
+  "dir": "rtl",
+  "icons": [
+    {
+      "src": "icon-180.png",
+      "sizes": "180x180",
+      "type": "image/png"
+    },
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
