@@ -530,8 +530,15 @@ dl.kv{grid-template-columns:110px 1fr}
     font-weight: 700;
     font-size: 15px;
 }
-.hidden { display: none !important; }
 nav{grid-template-columns:repeat(6,1fr)}
+#nav {
+  z-index: 100 !important;
+  grid-template-columns: repeat(6, 1fr) !important;
+}
+.hidden, .sheet-overlay.hidden, .modal-overlay.hidden, .modal.hidden {
+  display: none !important;
+  pointer-events: none !important;
+}
 
 </style>
 </head>
@@ -1095,7 +1102,17 @@ function renderGloss(){
 }
 
 /* ---------------- views ---------------- */
-function switchTab(t){$$(".tab").forEach(s=>s.classList.toggle("on",s.id==="t-"+t));$$("#nav button").forEach(b=>b.classList.toggle("on",b.dataset.t===t));window.scrollTo(0,0);if(t==="sum")renderSummary();if(t==="log")renderLog();if(t==="set")renderSettings();if(t==="an"&&window.renderAnalyses)renderAnalyses();if(t==="diag"&&typeof initDiagnosticCore==="function")initDiagnosticCore();}
+function switchTab(t){
+  if(t==="rec")t="add";
+  $$(".tab").forEach(s=>s.classList.toggle("on",s.id==="t-"+t||(t==="add"&&s.id==="t-rec")));
+  $$("#nav button").forEach(b=>b.classList.toggle("on",b.dataset.t===t||(t==="add"&&b.dataset.t==="rec")));
+  window.scrollTo(0,0);
+  if(t==="sum")renderSummary();
+  if(t==="log")renderLog();
+  if(t==="set")renderSettings();
+  if(t==="an"&&window.renderAnalyses)renderAnalyses();
+  if(t==="diag"&&typeof initDiagnosticCore==="function")initDiagnosticCore();
+}
 $$("#nav button").forEach(b=>b.onclick=()=>switchTab(b.dataset.t));
 const isEN=()=>!!(window.I18N&&I18N.isEN()),tr=s=>window.I18N?I18N.tr(s):s;
 const catAr=v=>{const c=CATS.find(c=>c[0]===v);return c?(isEN()?c[0]:c[1]):v};
@@ -1663,8 +1680,7 @@ async function sendQuery() {
           const res = await fetch(`https://ntfy.sh/${resChannel}/json?poll=1&since=all`);
           if (res.ok) {
             const text = await res.text();
-            const lines = text.trim().split('
-').filter(Boolean);
+            const lines = text.trim().split('\n').filter(Boolean);
             for (const line of lines) {
               const item = JSON.parse(line);
               const inner = await extractPayload(item);
