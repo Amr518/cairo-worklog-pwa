@@ -110,7 +110,95 @@ const D={
 "المسودة اتكتبت. راجع كل خطوة وصحح":"The draft is written. Review every step and correct it","الذكاء الاصطناعي مش متاح دلوقتي. كمّل بإيدك":"AI is not available now. Continue by hand","اتحفظت كمسودة":"Saved as a draft",
 "تعذّر النسخ":"Could not copy","اتنسخ لتحليلاتي. عدّل عليه":"Copied to my analyses. Edit it","بجهّز ملف Excel...":"Preparing the Excel...","ملف Excel ماطلعش. ممكن تعمل طباعة PDF بدله":"The Excel failed. You can print to PDF instead",
 "اتفهم بالذكاء الاصطناعي. ":"Understood by AI. ","الذكاء الاصطناعي مش متاح دلوقتي، اتفهم بالقواعد. ":"AI is not available now, understood by the rules. ","الخانات اتملت من كلامك. بص عليها وصحح اللي غلط":"The fields were filled from your words. Check them and fix anything wrong",
-". ما لقيتش: ":". Not found: ","الماكينة":"Machine","نوع الشغل (اختاره)":"Work type (choose it)","، ":", ","اتضاف ":"Added "," شغلانة":" entries"," و":" and "," تحليل":" analyses"
+". ما لقيتش: ":". Not found: ","الماكينة":"Machine","نوع الشغل (اختاره)":"Work type (choose it)","، ":", ","اتضاف ":"Added "," شغلانة":" entries"," و":" and "," تحليل":" analyses",
+/* PRJ-31 Stage 8 Diagnostic Terms */
+"تشخيص":"Diagnostics",
+"📖 استعن بكتالوج الماكينة لتشخيص العطل وقطع الغيار":"📖 Consult machine catalog for fault diagnosis & spare parts",
+"جاري فحص حالة كود الدعوة...":"Checking invite code status...",
+"تعديل الكود":"Edit code",
+"🏭 اختيار الماكينة":"🏭 Select machine",
+"الموقع (Site):":"Site:",
+"-- اختر الموقع --":"-- Select site --",
+"القسم (Section / Line):":"Section / Line:",
+"-- اختر القسم أولاً --":"-- Select section first --",
+"-- اختر القسم --":"-- Select section --",
+"الماكينة المستهدفة:":"Target machine:",
+"-- اختر الماكينة للتشخيص --":"-- Select machine for diagnosis --",
+"كود الماكينة (ID)":"Machine code (ID)",
+"كود JDE":"JDE code",
+"الموديل / المُصنع":"Model / Manufacturer",
+"الغرفة":"Room",
+"🏢 اختر الموقع":"🏢 Select site",
+"📍 اختر القسم":"📍 Select section",
+"⚙️ اختر الماكينة":"⚙️ Select machine",
+"🔍 تصفية في القائمة...":"🔍 Filter in list...",
+"لا توجد خيارات مطابقة.":"No matching options.",
+"مبنى الأكاسيا (ACACIA)":"Acacia Building (ACACIA)",
+"مبنى البالميي (PALMIER)":"Palmier Building (PALMIER)",
+"أدخل كود العطل أو الإنذار لبدء الفحص الفني.":"Enter fault or alarm code to start technical investigation.",
+"اكتب كود العطل أو الإنذار (مثال: 501, heating, sensor)...":"Type fault or alarm code (e.g. 501, heating, sensor)...",
+"فحص العطل":"Check fault",
+"جاري الفحص... ⏳":"Checking... ⏳",
+"📥 ترحيل الحل والقطع إلى تسجيل الشغل":"📥 Transfer solution & parts to work log",
+"✅ تم حل العطل وإغلاق الشات":"✅ Fault resolved & close chat",
+"تم اغلاق الشات":"Chat closed",
+"جاري استخراج البيانات الفنية...":"Extracting technical data...",
+"جاري الاتصال بخادم الصيانة ومراجعة الكتالوج...":"Connecting to maintenance server and reviewing catalog...",
+"مطابقة كود العطل ومراجعة خطوات الإصلاح المعتمدة...":"Matching fault code and reviewing approved repair steps...",
+"جاري استكمال البحث في الكتالوج ومطابقة قطع الغيار (المحاولة 2 من 2)...":"Continuing catalog search and matching spare parts (attempt 2 of 2)...",
+"⏳ استغرق الفحص وقتاً أطول من المعتاد. يرجى المحاولة مرة أخرى بعد لحظات أو التأكد من تشغيل خادم التشخيص بالمصنع.":"⏳ Diagnosis took longer than usual. Please retry shortly or ensure the factory diagnostic worker is running.",
+"📋 نسخ البيانات الفنية":"📋 Copy technical data",
+"✅ تم النسخ بنجاح!":"✅ Copied successfully!",
+"📥 ترحيل إلى تسجيل الشغل":"📥 Transfer to work log",
+"قطع الغيار والمكونات المرتبطة بالعطل":"Spare parts and components associated with fault",
+"متوفر":"In stock",
+"غير متوفر":"Out of stock",
+"صنف غير مسمى":"Unnamed part",
+"بدون كود":"No code",
+"🔢 رقم القطعة (Part No):":"🔢 Part No:",
+"📍 البن / الرف:":"📍 Bin / Shelf:",
+"📍 المخزن: غير مسجل في الجرد":"📍 Store: Not recorded in inventory",
+"💡 الدور الفني:":"💡 Technical role:",
+"اعتماد الحل وإغلاق الجلسة":"Approve solution and close session",
+"سيتم حفظ ملخص الصيانة في سجل الماكينة وإنهاء الجلسة.":"Maintenance summary will be saved to machine archive and session terminated.",
+"ملاحظات وإجراءات الصيانة (اختياري):":"Maintenance notes & actions (optional):",
+"مثال: تم تنظيف الحساس وتغيير الريلاي واشتغلت الماكينة طبيعي...":"Example: Cleaned sensor, replaced relay, machine operating normally...",
+"تأكيد إغلاق الشات":"Confirm chat close",
+"جاري الحفظ والتطهير...":"Saving and archiving...",
+"🔑 إدخال كود الدعوة":"🔑 Enter invite code",
+"للاتصال بخدمة تشخيص الأعطال عن بُعد، يرجى إدخال كود الدعوة المعتمد من مهندس الصيانة لمرة واحدة.":"To connect to remote diagnostic service, please enter the one-time authorized invite code from maintenance engineer.",
+"كود الدعوة:":"Invite code:",
+"أدخل كود الدعوة...":"Enter invite code...",
+"حفظ ومتابعة":"Save & continue",
+"كود الدعوة للتشخيص":"Diagnostic invite code",
+"أدخل كود الدعوة المعتمد من مهندس الصيانة للاتصال بخدمة تشخيص الأعطال عن بُعد.":"Enter authorized invite code from maintenance engineer to connect to remote fault diagnostic service.",
+"حفظ الكود":"Save code",
+"🖥️ وضع التشغيل المحلي (Localhost)":"🖥️ Local mode (Localhost)",
+"🔑 كود الدعوة مفعل (جاهز للتشخيص)":"🔑 Invite code active (Ready for diagnostics)",
+"⚠️ كود الدعوة غير معين (أدخل الكود للمتابعة)":"⚠️ Invite code not set (Enter code to continue)",
+"كود الدعوة غير صالح أو تم إيقافه. يرجى مراجعة مهندس الصيانة.":"Invite code is invalid or revoked. Please consult maintenance engineer.",
+"الماكينة المحددة غير مسجلة في قائمة الماكينات المعتمدة.":"Selected machine is not in approved list.",
+"صيغة الطلب غير صحيحة أو نص العطل فارغ.":"Invalid request format or empty query.",
+"المصدر غير مصرح له بالاتصال بالخدمة.":"Origin is not authorized to connect to service.",
+"انتهت صلاحية جلسة التشخيص أو لم يتم العثور عليها.":"Diagnostic session expired or not found.",
+"حجم النص المُدخل يتجاوز الحد المسموح به (2000 حرف كحد أقصى).":"Payload exceeds allowed limit (2000 characters maximum).",
+"تم الوصول للحد اليومي الأقصى للنظام. يرجى المحاولة غداً.":"Global daily limit reached. Please try tomorrow.",
+"تم تجاوز الحد المسموح من الطلبات لهذا الكود (30 طلباً في الساعة). يرجى المحاولة لاحقاً.":"Hourly rate limit exceeded for this invite code (30 requests/hr). Please try later.",
+"خدمة التشخيص متوقفة مؤقتاً للصيانة من قِبل الإدارة.":"Diagnostic service temporarily stopped for maintenance.",
+"خادم التشخيص بالمصنع غير متصل حالياً. يرجى تشغيل الخادم المحلي وإعادة المحاولة.":"Factory diagnostic worker is currently offline. Please ensure local worker is running and retry.",
+"⚠️ استجابة غير متوقعة من الوسيط: معرّف المهمة مفقود.":"⚠️ Unexpected gateway response: missing job ID.",
+"لم يتم العثور على تشخيص مطابق لكود العطل المدخل.":"No diagnostic solution matched the entered fault code.",
+"⚠️ تعذر الاتصال بخدمة التشخيص: ":"⚠️ Could not connect to diagnostic service: ",
+"⚠️ حدث خطأ أثناء فحص العطل: ":"⚠️ Error during fault diagnosis: ",
+"يرجى اختيار ماكينة وإجراء فحص أولاً":"Please select a machine and perform a diagnosis first",
+"تم ترحيل بيانات التشخيص إلى نموذج العمل بنجاح ✓":"Diagnostic data transferred to work log successfully ✓",
+"إصلاح: ":"Fix: ",
+"تعذر الوصول للحافظة تلقائياً، يمكنك تحديد النص ونسخه.":"Could not access clipboard automatically, please select and copy text manually.",
+"يرجى إدخال كود الدعوة للمتابعة.":"Please enter invite code to continue.",
+"تم حفظ كود الدعوة بنجاح 🔑":"Invite code saved successfully 🔑",
+"تم مسح كود الدعوة.":"Invite code removed.",
+"خطأ أثناء إغلاق الجلسة: ":"Error while closing session: ",
+"تم حل العطل وإغلاق الجلسة بواسطة الفني.":"Fault resolved and session closed by technician."
 };
 /* dynamic patterns */
 const P=[
@@ -127,6 +215,13 @@ const P=[
  [/^خطة التنفيذ \(Action Plan\): (.*)$/,(m)=>"Action Plan: "+T(m[1])],
  [/^(A3|3C) \| (.*)$/,(m)=>m[1]+" | "+T(m[2])],
  [/^([A-Za-z][A-Za-z0-9 \-\/()&]*[:?]) (.*)$/,(m)=>m[1]+" "+T(m[2])],
+ [/^(\d+) ماكينة معتمدة$/,(m)=>m[1]+" approved machines"],
+ [/^ماكينة معتمدة$/,()=>"approved machines"],
+ [/^قطع الغيار والمكونات المرتبطة بالعطل \((\d+)\):$/,(m)=>"Spare parts and components associated with fault ("+m[1]+"): "],
+ [/^غرفة (.+)$/,(m)=>"Room "+m[1]],
+ [/^أدخل كود العطل أو الإنذار لماكينة (.+)\.$/,(m)=>"Enter fault or alarm code for machine "+m[1]+"."],
+ [/^أدخل كود العطل أو الإنذار لماكينة (.*)$/,(m)=>"Enter fault or alarm code for machine "+m[1]],
+ [/^حدث خطأ غير متوقع من الخادم (.*)$/,(m)=>"Unexpected server error "+m[1]],
  [/^اتصلّح.*$/,null]
 ];
 const isAr=s=>/[؀-ۿ]/.test(s);
@@ -158,7 +253,13 @@ const FP=[
  [/^Why (\d+)\??$/,m=>"Pourquoi "+m[1]+(/\?$/.test(m[0])?" ?":"")],
  [/^(.*) \(([^()]+)\)$/,m=>{const a=F(m[1]),b=F(m[2]);return a!==m[1]||b!==m[2]?a+" ("+b+")":null}],
  [/^(.*) · (.*)$/,m=>{const a=F(m[1]),b=F(m[2]);return a!==m[1]||b!==m[2]?a+" · "+b:null}],
- [/^([^:]{2,40}): (.+)$/,m=>{const a=FRD[m[1]+":"]||FRD[m[1]],b=F(m[2]);return a?a.replace(/\s*:?\s*$/,"")+" : "+b:null}]
+ [/^([^:]{2,40}): (.+)$/,m=>{const a=FRD[m[1]+":"]||FRD[m[1]],b=F(m[2]);return a?a.replace(/\s*:?\s*$/,"")+" : "+b:null}],
+ [/^(\d+) approved machines$/,m=>m[1]+" machines homologuées"],
+ [/^approved machines$/,()=>"machines homologuées"],
+ [/^Room (.+)$/,m=>"Salle "+m[1]],
+ [/^Spare parts and components associated with fault \((\d+)\): ?$/,m=>"Pièces de rechange et composants associés à la panne ("+m[1]+") : "],
+ [/^Enter fault or alarm code for machine (.+)\.?$/,m=>"Saisissez le code de panne ou d'alarme pour la machine "+m[1]+"."],
+ [/^Unexpected server error (.*)$/,m=>"Erreur serveur inattendue "+m[1]]
 ];
 let FORCE=false;
 function F(s,force){
@@ -223,7 +324,7 @@ function apply(){
   const b=document.getElementById("langBtn");if(b)b.textContent=BTN[LANG];
   document.querySelectorAll("[data-lang-set]").forEach(x=>x.classList.toggle("on",x.dataset.langSet===LANG));
 }
-function rerender(){try{if(typeof renderChips==="function")renderChips();if(typeof renderAll==="function")renderAll();if(window.renderAnalyses)renderAnalyses();if(window.renderSugg)renderSugg()}catch(e){console.error(e)}}
+function rerender(){try{if(typeof renderChips==="function")renderChips();if(typeof renderAll==="function")renderAll();if(window.renderAnalyses)renderAnalyses();if(window.renderSugg)renderSugg();if(typeof window.renderDiagnosticI18n==="function")window.renderDiagnosticI18n();}catch(e){console.error(e)}}
 function setLang(l){
   if(!NEXT[l])l="ar";if(l===LANG&&document.documentElement.lang===l){apply();return}
   restoreAll();LANG=l;EN=l!=="ar";
@@ -238,6 +339,6 @@ function init(){
   LANG=l;EN=l!=="ar";apply();
   if(EN){rerender();walk(document.body)}
 }
-window.I18N={tr:s=>EN?X(s):s,isEN:()=>EN,isFR:()=>LANG==="fr",lang:()=>LANG,fr:F,frForce:s=>F(s,true),setLang,init};
+window.I18N={tr:s=>EN?X(s):s,isEN:()=>EN,isFR:()=>LANG==="fr",lang:()=>LANG,fr:F,frForce:s=>F(s,true),walk,setLang,init};
 init();
 })();

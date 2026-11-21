@@ -27,7 +27,89 @@ main{padding:14px 14px calc(96px + env(safe-area-inset-bottom));max-width:720px;
 .card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:12px}
 .card h3{margin:0 0 10px;font-size:15px;color:var(--navy)}
 label{display:block;font-size:13px;font-weight:700;color:var(--navy);margin:10px 0 4px}
-input,select,textarea{width:100%;border:1px solid #c5cbe0;border-radius:10px;padding:11px 12px;background:#fff;font-size:16px}
+input,textarea{width:100%;border:1px solid #c5cbe0;border-radius:10px;padding:11px 12px;background:#fff;font-size:16px}
+/* ============ Harmonized Servier Select Styling ============ */
+select {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  width: 100%;
+  background-color: #ffffff;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23242269' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-size: 16px 16px;
+  border: 1px solid #c5cbe0;
+  border-radius: 10px;
+  color: var(--navy);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 1.4;
+  box-shadow: 0 1px 3px rgba(36, 34, 105, 0.04);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+/* RTL (Arabic default): chevron arrow at left 12px, text padding-left: 38px */
+html[dir="rtl"] select,
+select[dir="rtl"] {
+  background-position: left 12px center;
+  padding: 10px 12px 10px 38px;
+}
+
+/* LTR (English / French): chevron arrow at right 12px, text padding-right: 38px */
+html[dir="ltr"] select,
+select[dir="ltr"] {
+  background-position: right 12px center;
+  padding: 10px 38px 10px 12px;
+}
+
+/* Bi-directional logical properties support */
+@supports (padding-inline-end: 38px) {
+  select {
+    padding-inline-start: 12px;
+    padding-inline-end: 38px;
+    padding-block: 10px;
+  }
+}
+
+/* Interactive & State Styling */
+select:hover:not(:disabled) {
+  border-color: #a8b3d6;
+}
+
+select:focus {
+  outline: none;
+  border-color: var(--navy);
+  box-shadow: 0 0 0 3px rgba(36, 34, 105, 0.12);
+}
+
+select:active:not(:disabled) {
+  border-color: var(--navy);
+}
+
+select:disabled {
+  background-color: var(--alt);
+  color: var(--muted);
+  cursor: not-allowed;
+  opacity: 0.65;
+  box-shadow: none;
+}
+
+/* Compact Overrides for Tight Form Grids (e.g., Idea Matrix & Rowbox) */
+.idea select {
+  padding: 6px 26px 6px 6px;
+  font-size: 13px;
+  background-size: 12px 12px;
+}
+html[dir="rtl"] .idea select {
+  background-position: left 6px center;
+  padding: 6px 6px 6px 26px;
+}
+html[dir="ltr"] .idea select {
+  background-position: right 6px center;
+  padding: 6px 26px 6px 6px;
+}
 textarea{min-height:96px;resize:vertical}#txt{margin-top:10px}
 .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .btn{border:0;border-radius:12px;padding:13px 16px;font-weight:700;cursor:pointer;font-size:16px}
@@ -1396,14 +1478,15 @@ function updateInviteStatusUI() {
     setInviteInput.value = code;
   }
   if (statusText) {
+    const tr = (window.I18N && typeof window.I18N.tr === 'function') ? window.I18N.tr : (s => s);
     if (brokerMode === 'local') {
-      statusText.textContent = '🖥️ وضع التشغيل المحلي (Localhost)';
+      statusText.textContent = tr('🖥️ وضع التشغيل المحلي (Localhost)');
       if (statusEl) statusEl.style.color = 'var(--navy)';
     } else if (code) {
-      statusText.textContent = '🔑 كود الدعوة مفعل (جاهز للتشخيص)';
+      statusText.textContent = tr('🔑 كود الدعوة مفعل (جاهز للتشخيص)');
       if (statusEl) statusEl.style.color = 'var(--green)';
     } else {
-      statusText.textContent = '⚠️ كود الدعوة غير معين (أدخل الكود للمتابعة)';
+      statusText.textContent = tr('⚠️ كود الدعوة غير معين (أدخل الكود للمتابعة)');
       if (statusEl) statusEl.style.color = 'var(--coral)';
     }
   }
@@ -1417,42 +1500,43 @@ function maybePromptInviteOnFirstUse() {
 }
 
 function formatGatewayError(status, errData) {
+  const tr = (window.I18N && typeof window.I18N.tr === 'function') ? window.I18N.tr : (s => s);
   const apiErr = (errData && errData.error) ? errData.error : null;
   if (apiErr && typeof apiErr.message === 'string' && apiErr.message.trim()) {
-    return apiErr.message.trim();
+    return tr(apiErr.message.trim());
   }
   const code = apiErr && apiErr.code ? apiErr.code : '';
   if (status === 401 || code === 'UNAUTHORIZED') {
-    return 'كود الدعوة غير صالح أو تم إيقافه. يرجى مراجعة مهندس الصيانة.';
+    return tr('كود الدعوة غير صالح أو تم إيقافه. يرجى مراجعة مهندس الصيانة.');
   }
   if (status === 400 && code === 'INVALID_MACHINE') {
-    return 'الماكينة المحددة غير مسجلة في قائمة الماكينات المعتمدة.';
+    return tr('الماكينة المحددة غير مسجلة في قائمة الماكينات المعتمدة.');
   }
   if (status === 400 || code === 'INVALID_REQUEST') {
-    return 'صيغة الطلب غير صحيحة أو نص العطل فارغ.';
+    return tr('صيغة الطلب غير صحيحة أو نص العطل فارغ.');
   }
   if (status === 403 || code === 'ORIGIN_FORBIDDEN') {
-    return 'المصدر غير مصرح له بالاتصال بالخدمة.';
+    return tr('المصدر غير مصرح له بالاتصال بالخدمة.');
   }
   if (status === 404 || code === 'JOB_NOT_FOUND') {
-    return 'انتهت صلاحية جلسة التشخيص أو لم يتم العثور عليها.';
+    return tr('انتهت صلاحية جلسة التشخيص أو لم يتم العثور عليها.');
   }
   if (status === 413 || code === 'PAYLOAD_TOO_LARGE') {
-    return 'حجم النص المُدخل يتجاوز الحد المسموح به (2000 حرف كحد أقصى).';
+    return tr('حجم النص المُدخل يتجاوز الحد المسموح به (2000 حرف كحد أقصى).');
   }
   if (status === 429) {
     if (code === 'RATE_LIMIT_GLOBAL') {
-      return 'تم الوصول للحد اليومي الأقصى للنظام. يرجى المحاولة غداً.';
+      return tr('تم الوصول للحد اليومي الأقصى للنظام. يرجى المحاولة غداً.');
     }
-    return 'تم تجاوز الحد المسموح من الطلبات لهذا الكود (30 طلباً في الساعة). يرجى المحاولة لاحقاً.';
+    return tr('تم تجاوز الحد المسموح من الطلبات لهذا الكود (30 طلباً في الساعة). يرجى المحاولة لاحقاً.');
   }
   if (status === 503) {
     if (code === 'SERVICE_STOPPED') {
-      return 'خدمة التشخيص متوقفة مؤقتاً للصيانة من قِبل الإدارة.';
+      return tr('خدمة التشخيص متوقفة مؤقتاً للصيانة من قِبل الإدارة.');
     }
-    return 'خادم التشخيص بالمصنع غير متصل حالياً. يرجى تشغيل الخادم المحلي وإعادة المحاولة.';
+    return tr('خادم التشخيص بالمصنع غير متصل حالياً. يرجى تشغيل الخادم المحلي وإعادة المحاولة.');
   }
-  return `حدث خطأ غير متوقع من الخادم (HTTP ${status || 'Network'}).`;
+  return tr(`حدث خطأ غير متوقع من الخادم (HTTP ${status || 'Network'}).`);
 }
 
 window.latestDiagMachine = null;
@@ -1491,6 +1575,56 @@ const sheetItemsList = document.getElementById('sheet-items-list');
 
 let currentPickerType = null;
 let currentRawItems = [];
+
+window.renderDiagnosticI18n = function() {
+  const tr = (window.I18N && typeof window.I18N.tr === 'function') ? window.I18N.tr : (s => s);
+  updateInviteStatusUI();
+  if (!selectedSite && textSite) textSite.textContent = tr('-- اختر الموقع --');
+  if (!selectedSection && textSection) {
+    textSection.textContent = selectedSite ? tr('-- اختر القسم --') : tr('-- اختر القسم أولاً --');
+  }
+  if (!selectedMachine && textMachine) textMachine.textContent = tr('-- اختر الماكينة للتشخيص --');
+  if (machinesCountEl && typeof allMachines !== 'undefined' && allMachines) {
+    machinesCountEl.textContent = (allMachines.length || 0) + ' ' + tr('ماكينة معتمدة');
+  }
+  // Re-localize assistant welcome message if no active user conversation has taken place
+  if (messagesArea && !messagesArea.querySelector('.message.user')) {
+    if (selectedMachine) {
+      messagesArea.innerHTML = `
+        <div class="message assistant">
+          ${tr('أدخل كود العطل أو الإنذار لماكينة')} <b>${escapeHtml(selectedMachine.display_name || selectedMachine.name || selectedMachine.id)}</b>.
+        </div>
+      `;
+    } else {
+      messagesArea.innerHTML = `
+        <div class="message assistant">
+          ${tr('أدخل كود العطل أو الإنذار لبدء الفحص الفني.')}
+        </div>
+      `;
+    }
+  }
+  if (queryInput) {
+    queryInput.placeholder = tr('اكتب كود العطل أو الإنذار (مثال: 501, heating, sensor)...');
+  }
+  if (btnSend && !btnSend.disabled) {
+    btnSend.innerHTML = `<span>${tr('فحص العطل')}</span> 🔍`;
+  }
+  if (btnOpenCloseModal) {
+    btnOpenCloseModal.textContent = tr('✅ تم حل العطل وإغلاق الشات');
+  }
+  if (window.I18N && window.I18N.isEN()) {
+    const diagTab = document.getElementById('t-diag');
+    if (diagTab && window.I18N.walk) window.I18N.walk(diagTab);
+    const cModal = document.getElementById('close-modal');
+    if (cModal && window.I18N.walk) window.I18N.walk(cModal);
+    const iModal = document.getElementById('invite-prompt-modal');
+    if (iModal && window.I18N.walk) window.I18N.walk(iModal);
+    const pOverlay = document.getElementById('picker-sheet-overlay');
+    if (pOverlay && window.I18N.walk) window.I18N.walk(pOverlay);
+    const nav = document.getElementById('nav');
+    if (nav && window.I18N.walk) window.I18N.walk(nav);
+  }
+};
 
 async function initDiagnosticCore() {
   if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
@@ -1545,19 +1679,23 @@ async function initDiagnosticCore() {
 }
 
 function openPicker(type) {
+  const tr = (window.I18N && typeof window.I18N.tr === 'function') ? window.I18N.tr : (s => s);
   currentPickerType = type;
-  if (sheetSearchInput) sheetSearchInput.value = '';
+  if (sheetSearchInput) {
+    sheetSearchInput.value = '';
+    sheetSearchInput.placeholder = tr('🔍 تصفية في القائمة...');
+  }
   
   if (type === 'site') {
-    sheetTitle.textContent = '🏢 اختر الموقع';
+    sheetTitle.textContent = tr('🏢 اختر الموقع');
     sheetSearchBox.classList.add('hidden');
     currentRawItems = [
-      { value: 'ACACIA', label: 'مبنى الأكاسيا (ACACIA)', selected: selectedSite === 'ACACIA' },
-      { value: 'PALMIER', label: 'مبنى البالميي (PALMIER)', selected: selectedSite === 'PALMIER' }
+      { value: 'ACACIA', label: tr('مبنى الأكاسيا (ACACIA)'), selected: selectedSite === 'ACACIA' },
+      { value: 'PALMIER', label: tr('مبنى البالميي (PALMIER)'), selected: selectedSite === 'PALMIER' }
     ];
   } else if (type === 'section') {
     if (!selectedSite || !sectionsBySite[selectedSite]) return;
-    sheetTitle.textContent = '📍 اختر القسم';
+    sheetTitle.textContent = tr('📍 اختر القسم');
     sheetSearchBox.classList.add('hidden');
     currentRawItems = (sectionsBySite[selectedSite] || []).map(sec => ({
       value: sec,
@@ -1566,7 +1704,7 @@ function openPicker(type) {
     }));
   } else if (type === 'machine') {
     if (!selectedSite || !selectedSection) return;
-    sheetTitle.textContent = '⚙️ اختر الماكينة';
+    sheetTitle.textContent = tr('⚙️ اختر الماكينة');
     sheetSearchBox.classList.remove('hidden');
 
     const filtered = allMachines.filter(m => {
@@ -1581,7 +1719,7 @@ function openPicker(type) {
       return {
         value: m.id || name,
         label: name,
-        subtext: sub || (m.room_no ? `غرفة ${m.room_no}` : ''),
+        subtext: sub || (m.room_no ? `${tr('الغرفة')} ${m.room_no}` : ''),
         selected: selectedMachine && (selectedMachine.id === m.id || selectedMachine.name === m.name)
       };
     });
@@ -1595,6 +1733,7 @@ function openPicker(type) {
 }
 
 function renderSheetItems() {
+  const tr = (window.I18N && typeof window.I18N.tr === 'function') ? window.I18N.tr : (s => s);
   const query = (sheetSearchInput.value || '').trim().toLowerCase();
   const items = currentRawItems.filter(item => {
     if (!query) return true;
@@ -1604,7 +1743,7 @@ function renderSheetItems() {
   });
 
   if (items.length === 0) {
-    sheetItemsList.innerHTML = '<div style="text-align: center; color: var(--muted); padding: 24px 0; font-size: 13px;">لا توجد خيارات مطابقة.</div>';
+    sheetItemsList.innerHTML = `<div style="text-align: center; color: var(--muted); padding: 24px 0; font-size: 13px;">${tr('لا توجد خيارات مطابقة.')}</div>`;
     return;
   }
 
@@ -1639,6 +1778,7 @@ if (sheetOverlay) {
 if (sheetSearchInput) sheetSearchInput.addEventListener('input', renderSheetItems);
 
 function onPickerItemSelected(val, label) {
+  const tr = (window.I18N && typeof window.I18N.tr === 'function') ? window.I18N.tr : (s => s);
   closePicker();
 
   if (currentPickerType === 'site') {
@@ -1647,10 +1787,10 @@ function onPickerItemSelected(val, label) {
     
     selectedSection = null;
     selectedMachine = null;
-    textSection.textContent = '-- اختر القسم --';
+    textSection.textContent = tr('-- اختر القسم --');
     triggerSection.classList.remove('disabled');
 
-    textMachine.textContent = '-- اختر الماكينة للتشخيص --';
+    textMachine.textContent = tr('-- اختر الماكينة للتشخيص --');
     triggerMachine.classList.add('disabled');
 
     machineDetails.classList.add('hidden');
@@ -1661,7 +1801,7 @@ function onPickerItemSelected(val, label) {
     textSection.textContent = label;
 
     selectedMachine = null;
-    textMachine.textContent = '-- اختر الماكينة للتشخيص --';
+    textMachine.textContent = tr('-- اختر الماكينة للتشخيص --');
     triggerMachine.classList.remove('disabled');
 
     machineDetails.classList.add('hidden');
@@ -1682,7 +1822,7 @@ function onPickerItemSelected(val, label) {
       currentSessionId = null;
       messagesArea.innerHTML = `
         <div class="message assistant">
-          أدخل كود العطل أو الإنذار لماكينة <b>${selectedMachine.display_name || selectedMachine.name || selectedMachine.id}</b>.
+          ${tr('أدخل كود العطل أو الإنذار لماكينة')} <b>${escapeHtml(selectedMachine.display_name || selectedMachine.name || selectedMachine.id)}</b>.
         </div>
       `;
       chatSection.classList.remove('hidden');
@@ -1707,6 +1847,9 @@ async function sendQuery() {
   const q = queryInput.value.trim();
   if (!q || !selectedMachine) return;
 
+  const tr = (window.I18N && typeof window.I18N.tr === 'function') ? window.I18N.tr : (s => s);
+  const activeLang = (window.I18N && typeof window.I18N.lang === 'function') ? window.I18N.lang() : (localStorage.getItem('wl.lang') || 'ar');
+
   if (brokerMode !== 'local') {
     const inviteCode = getInviteCode();
     if (!inviteCode) {
@@ -1719,7 +1862,7 @@ async function sendQuery() {
   appendMessage('user', q);
   queryInput.value = '';
   btnSend.disabled = true;
-  btnSend.textContent = 'جاري الفحص... ⏳';
+  btnSend.textContent = tr('جاري الفحص... ⏳');
 
   if (brokerMode !== 'local') {
     const inviteCode = getInviteCode();
@@ -1735,8 +1878,8 @@ async function sendQuery() {
       <div style="display: flex; align-items: center; gap: 8px;">
         <span>⏳</span>
         <div>
-          <b style="color: var(--navy);">جاري استخراج البيانات الفنية...</b><br>
-          <span id="load-status-${loadingId}" style="font-size: 11.5px; color: var(--muted);">جاري الاتصال بخادم الصيانة ومراجعة الكتالوج...</span>
+          <b style="color: var(--navy);">${tr('جاري استخراج البيانات الفنية...')}</b><br>
+          <span id="load-status-${loadingId}" style="font-size: 11.5px; color: var(--muted);">${tr('جاري الاتصال بخادم الصيانة ومراجعة الكتالوج...')}</span>
         </div>
       </div>
     `;
@@ -1747,7 +1890,7 @@ async function sendQuery() {
       const loadEl = document.getElementById(loadingId);
       if (loadEl) loadEl.remove();
       btnSend.disabled = false;
-      btnSend.innerHTML = '<span>فحص العطل</span> 🔍';
+      btnSend.innerHTML = `<span>${tr('فحص العطل')}</span> 🔍`;
     };
 
     try {
@@ -1760,7 +1903,8 @@ async function sendQuery() {
         body: JSON.stringify({
           machine_id: machId,
           query: q,
-          technician_name: techName
+          technician_name: techName,
+          language: activeLang
         })
       });
 
@@ -1776,7 +1920,7 @@ async function sendQuery() {
       const jobId = createData && createData.job_id;
       if (!jobId) {
         cleanupLoading();
-        appendMessage('assistant', '⚠️ استجابة غير متوقعة من الوسيط: معرّف المهمة مفقود.');
+        appendMessage('assistant', tr('⚠️ استجابة غير متوقعة من الوسيط: معرّف المهمة مفقود.'));
         return;
       }
       currentSessionId = jobId;
@@ -1785,8 +1929,8 @@ async function sendQuery() {
         const statusSpan = document.getElementById(`load-status-${loadingId}`);
         if (statusSpan) {
           statusSpan.textContent = attempt === 1
-            ? 'مطابقة كود العطل ومراجعة خطوات الإصلاح المعتمدة...'
-            : 'جاري استكمال البحث في الكتالوج ومطابقة قطع الغيار (المحاولة 2 من 2)...';
+            ? tr('مطابقة كود العطل ومراجعة خطوات الإصلاح المعتمدة...')
+            : tr('جاري استكمال البحث في الكتالوج ومطابقة قطع الغيار (المحاولة 2 من 2)...');
         }
 
         const pollRes = await fetch(`${GATEWAY_URL}/v1/job/${encodeURIComponent(jobId)}/result?wait=25`, {
@@ -1803,14 +1947,14 @@ async function sendQuery() {
           const parts = resultData.suggested_parts || [];
           window.latestDiagSolution = solution;
           window.latestDiagParts = parts;
-          appendMessage('assistant', solution || 'لم يتم العثور على تشخيص مطابق لكود العطل المدخل.', parts);
+          appendMessage('assistant', solution || tr('لم يتم العثور على تشخيص مطابق لكود العطل المدخل.'), parts);
           return;
         }
 
         if (pollRes.status === 202) {
           if (attempt === 2) {
             cleanupLoading();
-            appendMessage('assistant', '⏳ استغرق الفحص وقتاً أطول من المعتاد. يرجى المحاولة مرة أخرى بعد لحظات أو التأكد من تشغيل خادم التشخيص بالمصنع.');
+            appendMessage('assistant', tr('⏳ استغرق الفحص وقتاً أطول من المعتاد. يرجى المحاولة مرة أخرى بعد لحظات أو التأكد من تشغيل خادم التشخيص بالمصنع.'));
             return;
           }
           continue;
@@ -1824,7 +1968,7 @@ async function sendQuery() {
       }
     } catch (e) {
       cleanupLoading();
-      appendMessage('assistant', `⚠️ تعذر الاتصال بخدمة التشخيص: ${e.message}`);
+      appendMessage('assistant', `${tr('⚠️ تعذر الاتصال بخدمة التشخيص: ')}${e.message}`);
     }
   } else {
     try {
@@ -1836,7 +1980,7 @@ async function sendQuery() {
           query: q,
           session_id: currentSessionId,
           technician_name: 'Technician PWA',
-          language: 'ar'
+          language: activeLang
         })
       });
 
@@ -1846,12 +1990,12 @@ async function sendQuery() {
       }
       window.latestDiagSolution = data.solution || '';
       window.latestDiagParts = data.suggested_parts || [];
-      appendMessage('assistant', data.solution || 'لم يتم العثور على تشخيص مطابق لكود العطل المدخل.', data.suggested_parts);
+      appendMessage('assistant', data.solution || tr('لم يتم العثور على تشخيص مطابق لكود العطل المدخل.'), data.suggested_parts);
     } catch (e) {
-      appendMessage('assistant', `⚠️ حدث خطأ أثناء فحص العطل: ${e.message}`);
+      appendMessage('assistant', `${tr('⚠️ حدث خطأ أثناء فحص العطل: ')}${e.message}`);
     } finally {
       btnSend.disabled = false;
-      btnSend.innerHTML = '<span>فحص العطل</span> 🔍';
+      btnSend.innerHTML = `<span>${tr('فحص العطل')}</span> 🔍`;
     }
   }
 }
@@ -1883,6 +2027,7 @@ function appendMessage(role, text, parts) {
   msgDiv.innerHTML = formatted;
 
   if (role === 'assistant' && text && text.length > 30) {
+    const tr = (window.I18N && typeof window.I18N.tr === 'function') ? window.I18N.tr : (s => s);
     const actionRow = document.createElement('div');
     actionRow.style.marginTop = '10px';
     actionRow.style.display = 'flex';
@@ -1894,13 +2039,13 @@ function appendMessage(role, text, parts) {
     copyBtn.className = 'btn ghost';
     copyBtn.style.padding = '4px 10px';
     copyBtn.style.fontSize = '12px';
-    copyBtn.innerHTML = '📋 نسخ البيانات الفنية';
+    copyBtn.innerHTML = tr('📋 نسخ البيانات الفنية');
     copyBtn.onclick = () => {
       navigator.clipboard.writeText(text).then(() => {
-        copyBtn.textContent = '✅ تم النسخ بنجاح!';
-        setTimeout(() => { copyBtn.innerHTML = '📋 نسخ البيانات الفنية'; }, 2500);
+        copyBtn.textContent = tr('✅ تم النسخ بنجاح!');
+        setTimeout(() => { copyBtn.innerHTML = tr('📋 نسخ البيانات الفنية'); }, 2500);
       }).catch(() => {
-        alert('تعذر الوصول للحافظة تلقائياً، يمكنك تحديد النص ونسخه.');
+        alert(tr('تعذر الوصول للحافظة تلقائياً، يمكنك تحديد النص ونسخه.'));
       });
     };
     actionRow.appendChild(copyBtn);
@@ -1909,7 +2054,7 @@ function appendMessage(role, text, parts) {
     handoffBtn.className = 'btn navy btn-handoff';
     handoffBtn.style.padding = '4px 10px';
     handoffBtn.style.fontSize = '12px';
-    handoffBtn.innerHTML = '📥 ترحيل إلى تسجيل الشغل';
+    handoffBtn.innerHTML = tr('📥 ترحيل إلى تسجيل الشغل');
     handoffBtn.onclick = () => transferDiagnosticToWorkLog(handoffBtn);
     actionRow.appendChild(handoffBtn);
 
@@ -1917,16 +2062,17 @@ function appendMessage(role, text, parts) {
   }
 
   if (parts && parts.length > 0) {
+    const tr = (window.I18N && typeof window.I18N.tr === 'function') ? window.I18N.tr : (s => s);
     const partsDiv = document.createElement('div');
     partsDiv.className = 'parts-grid';
-    partsDiv.innerHTML = '<div style="font-size: 12px; font-weight: bold; color: var(--navy); margin-top: 8px; display: flex; align-items: center; gap: 6px;"><span>⚙️</span><span>قطع الغيار والمكونات المرتبطة بالعطل (' + parts.length + '):</span></div>';
+    partsDiv.innerHTML = '<div style="font-size: 12px; font-weight: bold; color: var(--navy); margin-top: 8px; display: flex; align-items: center; gap: 6px;"><span>⚙️</span><span>' + tr('قطع الغيار والمكونات المرتبطة بالعطل') + ' (' + parts.length + '):</span></div>';
 
     parts.forEach(p => {
       const card = document.createElement('div');
       card.className = 'part-card';
 
-      const partName = p.part_name || p.name || p.name_en || 'صنف غير مسمى';
-      const partCode = p.part_code || p.code || p.code_hint || (p.item_number || 'بدون كود');
+      const partName = p.part_name || p.name || p.name_en || tr('صنف غير مسمى');
+      const partCode = p.part_code || p.code || p.code_hint || (p.item_number || tr('بدون كود'));
       const rawQty = (p.qty_on_hand !== undefined && p.qty_on_hand !== null) ? Number(p.qty_on_hand) : (p.qty !== undefined ? Number(p.qty) : 0);
       const qty = isNaN(rawQty) ? 0 : rawQty;
       const location = (p.location || p.bin || '').trim();
@@ -1935,17 +2081,17 @@ function appendMessage(role, text, parts) {
       const stockStatus = p.stock_status || (qty > 0 ? 'IN_STOCK' : 'OUT_OF_STOCK');
 
       let stockClass = (qty > 0 || stockStatus === 'IN_STOCK') ? 'in' : 'out';
-      let stockLabel = stockClass === 'in' ? 'متوفر' : 'غير متوفر';
+      let stockLabel = stockClass === 'in' ? tr('متوفر') : tr('غير متوفر');
 
       let locHtml = '';
       if (location && location !== 'غير مدرج') {
         const whText = warehouse ? ` <span style="color:var(--muted)">[${escapeHtml(warehouse)}]</span>` : '';
-        locHtml = `<span class="part-meta-item">📍 البن / الرف: <b style="color:var(--coral); font-family:monospace;">${escapeHtml(location)}</b>${whText}</span>`;
+        locHtml = `<span class="part-meta-item">${tr('📍 البن / الرف:')} <b style="color:var(--coral); font-family:monospace;">${escapeHtml(location)}</b>${whText}</span>`;
       } else {
-        locHtml = `<span class="part-meta-item" style="color:var(--muted)">📍 المخزن: غير مسجل في الجرد</span>`;
+        locHtml = `<span class="part-meta-item" style="color:var(--muted)">${tr('📍 المخزن: غير مسجل في الجرد')}</span>`;
       }
 
-      const roleHtml = role ? `<div class="part-role">💡 <b>الدور الفني:</b> ${escapeHtml(role)}</div>` : '';
+      const roleHtml = role ? `<div class="part-role">💡 <b>${tr('💡 الدور الفني:')}</b> ${escapeHtml(role)}</div>` : '';
 
       card.innerHTML = `
         <div class="part-header">
@@ -1953,7 +2099,7 @@ function appendMessage(role, text, parts) {
           <span class="stock-tag ${stockClass}">${stockLabel}</span>
         </div>
         <div class="part-meta">
-          <span class="part-meta-item">🔢 رقم القطعة (Part No): <b style="font-family:monospace;letter-spacing:0.5px;">${escapeHtml(partCode)}</b></span>
+          <span class="part-meta-item">${tr('🔢 رقم القطعة (Part No):')} <b style="font-family:monospace;letter-spacing:0.5px;">${escapeHtml(partCode)}</b></span>
           ${locHtml}
         </div>
         ${roleHtml}
@@ -1974,9 +2120,10 @@ function appendMessage(role, text, parts) {
 
 // Transfer to WorkLog
 function transferDiagnosticToWorkLog(btn) {
+  const tr = (window.I18N && typeof window.I18N.tr === 'function') ? window.I18N.tr : (s => s);
   const mach = selectedMachine || window.latestDiagMachine;
   if (!mach && !window.latestDiagQuery) {
-    if (typeof toast === 'function') toast("يرجى اختيار ماكينة وإجراء فحص أولاً");
+    if (typeof toast === 'function') toast(tr("يرجى اختيار ماكينة وإجراء فحص أولاً"));
     return;
   }
   const machName = mach ? (mach.display_name || mach.name || mach.id) : "";
@@ -2013,7 +2160,7 @@ function transferDiagnosticToWorkLog(btn) {
   // 3. Title
   const fTitle = document.getElementById('fTitle');
   if (fTitle && window.latestDiagQuery) {
-    fTitle.value = `إصلاح: ${window.latestDiagQuery}`.slice(0, 120);
+    fTitle.value = `${tr('إصلاح: ')}${window.latestDiagQuery}`.slice(0, 120);
   }
 
   // 4. Desc
@@ -2042,7 +2189,7 @@ function transferDiagnosticToWorkLog(btn) {
   }
   if (formCard) formCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
   if (typeof toast === 'function') {
-    toast("تم ترحيل بيانات التشخيص إلى نموذج العمل بنجاح ✓");
+    toast(tr("تم ترحيل بيانات التشخيص إلى نموذج العمل بنجاح ✓"));
   }
 }
 window.transferDiagnosticToLog = transferDiagnosticToWorkLog;
@@ -2063,6 +2210,7 @@ if (btnCancelModal) {
 
 if (btnConfirmClose) {
   btnConfirmClose.addEventListener('click', async () => {
+    const tr = (window.I18N && typeof window.I18N.tr === 'function') ? window.I18N.tr : (s => s);
     if (!currentSessionId) {
       closeModal.classList.add('hidden');
       chatSection.classList.add('hidden');
@@ -2071,12 +2219,12 @@ if (btnConfirmClose) {
 
     const notes = closeNotes.value.trim();
     btnConfirmClose.disabled = true;
-    btnConfirmClose.textContent = 'جاري الحفظ والتطهير...';
+    btnConfirmClose.textContent = tr('جاري الحفظ والتطهير...');
 
     if (brokerMode !== 'local') {
       try {
         const inviteCode = getInviteCode();
-        const notesText = notes || 'تم حل العطل وإغلاق الجلسة بواسطة الفني.';
+        const notesText = notes || tr('تم حل العطل وإغلاق الجلسة بواسطة الفني.');
         const closeRes = await fetch(`${GATEWAY_URL}/v1/job/${encodeURIComponent(currentSessionId)}/close`, {
           method: 'POST',
           headers: {
@@ -2108,10 +2256,10 @@ if (btnConfirmClose) {
           alert(formatGatewayError(closeRes.status, errData));
         }
       } catch(e) {
-        alert(`خطأ أثناء إغلاق الجلسة: ${e.message}`);
+        alert(`${tr('خطأ أثناء إغلاق الجلسة: ')}${e.message}`);
       } finally {
         btnConfirmClose.disabled = false;
-        btnConfirmClose.textContent = 'تأكيد إغلاق الشات';
+        btnConfirmClose.textContent = tr('تأكيد إغلاق الشات');
       }
     } else {
       try {
@@ -2128,10 +2276,10 @@ if (btnConfirmClose) {
         archiveBanner.classList.remove('hidden');
         currentSessionId = null;
       } catch (e) {
-        alert(`خطأ أثناء إغلاق الجلسة: ${e.message}`);
+        alert(`${tr('خطأ أثناء إغلاق الجلسة: ')}${e.message}`);
       } finally {
         btnConfirmClose.disabled = false;
-        btnConfirmClose.textContent = 'تأكيد إغلاق الشات';
+        btnConfirmClose.textContent = tr('تأكيد إغلاق الشات');
       }
     }
   });
@@ -2142,9 +2290,10 @@ const btnSaveSetInvite = document.getElementById('btn-save-set-invite');
 const setInviteCode = document.getElementById('set-invite-code');
 if (btnSaveSetInvite && setInviteCode) {
   btnSaveSetInvite.addEventListener('click', () => {
+    const tr = (window.I18N && typeof window.I18N.tr === 'function') ? window.I18N.tr : (s => s);
     const val = setInviteCode.value.trim();
     saveInviteCode(val);
-    alert(val ? 'تم حفظ كود الدعوة بنجاح 🔑' : 'تم مسح كود الدعوة.');
+    alert(val ? tr('تم حفظ كود الدعوة بنجاح 🔑') : tr('تم مسح كود الدعوة.'));
   });
 }
 
@@ -2155,9 +2304,10 @@ const btnEditInviteCode = document.getElementById('btn-edit-invite-code');
 
 if (btnSaveInvite && diagInviteInput) {
   btnSaveInvite.addEventListener('click', () => {
+    const tr = (window.I18N && typeof window.I18N.tr === 'function') ? window.I18N.tr : (s => s);
     const val = diagInviteInput.value.trim();
     if (!val) {
-      alert('يرجى إدخال كود الدعوة للمتابعة.');
+      alert(tr('يرجى إدخال كود الدعوة للمتابعة.'));
       return;
     }
     saveInviteCode(val);

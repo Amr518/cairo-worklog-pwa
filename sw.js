@@ -10,6 +10,8 @@ const CORE_ASSETS = [
   "icon-512.png",
   "logo-white.png",
   "logo.png",
+  "i18n.js",
+  "i18n_fr.js",
   // Worklog Sub-App (Zero Modification)
   "apps/worklog/index.html",
   "apps/worklog/manifest.webmanifest",
