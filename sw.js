@@ -1,4 +1,4 @@
-const CACHE_NAME = "wl-unified-v2";
+const CACHE_NAME = "wl-unified-v3";
 
 const CORE_ASSETS = [
   "./",
@@ -51,6 +51,11 @@ self.addEventListener("activate", (event) => {
 
 self.addEventListener("fetch", (event) => {
   if (event.request.method !== "GET" || new URL(event.request.url).origin !== location.origin) {
+    return;
+  }
+  const reqUrl = new URL(event.request.url);
+  if (reqUrl.pathname.endsWith("gateway_url.txt") || reqUrl.pathname.endsWith("/gateway_url.txt")) {
+    event.respondWith(fetch(event.request, { cache: "no-store" }));
     return;
   }
   event.respondWith(
