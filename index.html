@@ -108,7 +108,7 @@ select:disabled {
   pointer-events: none !important;
 }
 
-.custom-select-trigger {
+.custom-select-wrap > .custom-select-trigger {
   position: absolute;
   inset: 0;
   z-index: 2;
@@ -118,8 +118,8 @@ select:disabled {
   -webkit-tap-highlight-color: transparent;
 }
 
-.custom-select-trigger:focus,
-.custom-select-trigger:focus-visible {
+.custom-select-wrap > .custom-select-trigger:focus,
+.custom-select-wrap > .custom-select-trigger:focus-visible {
   outline: 2px solid var(--coral);
   outline-offset: 2px;
   box-shadow: 0 0 0 3px rgba(36, 34, 105, 0.16);
@@ -292,8 +292,9 @@ dl.kv{grid-template-columns:110px 1fr}
     margin-bottom: 0;
 }
 
-/* Custom Mobile Select Trigger */
 .custom-select-trigger {
+    /* Custom Mobile Select Trigger */
+    position: relative;
     background: #fff;
     border: 1px solid #c5cbe0;
     border-radius: 10px;
@@ -1417,14 +1418,14 @@ async function loadAndHarmonizeMachines() {
     const machinesList = Array.isArray(data) ? data : (data.machines || []);
     
     // Add missing machines into BUILTIN
-    const existingNames = new Set(BUILTIN.map(m => m[0]));
+    const existingNames = new Set(BUILTIN.map(m => m.name));
     machinesList.forEach(m => {
       const name = m.display_name || m.name;
       if (name && !existingNames.has(name)) {
         const bld = (m.building || m.site || "Acacia").toUpperCase().includes("PALMIER") ? "Palmier" : "Acacia";
         const area = m.section || m.area || "";
-        const aliases = m.aliases || [name];
-        BUILTIN.push([name, bld, area, aliases]);
+        const aliases = Array.isArray(m.aliases) ? m.aliases : [name];
+        BUILTIN.push({ name, building: bld, area, aliases });
         existingNames.add(name);
       }
     });
@@ -1735,11 +1736,21 @@ function resolveSubtextForOption(selectId, val) {
 }
 
 function extractSelectOptions(selectEl) {
-  const options = Array.from(selectEl.options || []);
+  const rawOptions = Array.from(selectEl.options || []);
+  const validOptions = rawOptions.filter(opt => {
+    const txt = (opt.text || '').trim();
+    const val = (opt.value || '').trim();
+    return txt.length > 0 || val.length > 0;
+  });
+
+  const filteredOptions = (selectEl.id === 'fMachine')
+    ? validOptions.filter(opt => (opt.value || '').trim() !== '')
+    : validOptions;
+
   const currentVal = selectEl.value;
 
-  return options.map(opt => {
-    const isSelected = (opt.value === currentVal) || opt.selected;
+  return filteredOptions.map(opt => {
+    const isSelected = currentVal ? (opt.value === currentVal) : (opt.value === '' && opt.selected);
     const sub = (opt.dataset && opt.dataset.subtext) || (typeof resolveSubtextForOption === 'function' ? resolveSubtextForOption(selectEl.id, opt.value) : '');
     return {
       value: opt.value,
