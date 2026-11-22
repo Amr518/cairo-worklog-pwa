@@ -202,7 +202,36 @@ const D={
 "تم حفظ كود الدعوة بنجاح 🔑":"Invite code saved successfully 🔑",
 "تم مسح كود الدعوة.":"Invite code removed.",
 "خطأ أثناء إغلاق الجلسة: ":"Error while closing session: ",
-"تم حل العطل وإغلاق الجلسة بواسطة الفني.":"Fault resolved and session closed by technician."
+"تم حل العطل وإغلاق الجلسة بواسطة الفني.":"Fault resolved and session closed by technician.",
+/* admin invite ui */
+"لوحة تحكم الأكواد":"Invite Code Dashboard",
+"كود جديد لفني":"New Technician Code",
+"كود جديد لفني:":"New Technician Code:",
+"اسم الفني":"Technician Name",
+"إنشاء الكود":"Create Code",
+"نسخ":"Copy",
+"إيقاف الكود":"Revoke Code",
+"حالة الاتصال":"Connection Status",
+"استعلامات اليوم":"Today's Queries",
+"رمز المشرف":"Admin Token",
+"رمز الأدمن:":"Admin Token:",
+"رمز الأدمن":"Admin Token",
+"أدخل رمز الأدمن (Admin Token)...":"Enter Admin Token...",
+"حفظ الرمز على هذا المتصفح":"Remember token on this browser",
+"دخول للوحة التحكم":"Unlock Dashboard",
+"فتح لوحة التحكم":"Unlock Dashboard",
+"الرمز الافتراضي":"Default Token",
+"فتح اللوحة":"Open Panel",
+"قفل اللوحة":"Lock Dashboard",
+"تحديث":"Refresh",
+"الأكواد المسجلة:":"Registered codes:",
+"الأكواد المسجلة":"Registered Codes",
+"الأكواد النشطة":"Active Codes",
+"ساري":"Active",
+"ملغي":"Revoked",
+"تم نسخ الكود":"Code copied",
+"مشاركة":"Share",
+"حالة الاتصال: جاري الفحص...":"Connection status: Checking..."
 };
 /* dynamic patterns */
 const P=[
