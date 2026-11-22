@@ -104,7 +104,6 @@ window.I18N_FR={"Extra work":"Travail en plus","Numbers and savings":"Chiffres e
 "Enter Admin Token...":"Entrez le jeton administrateur...",
 "Remember token on this browser":"Mémoriser sur ce navigateur",
 "Unlock Dashboard":"Déverrouiller",
-"Default Token":"Jeton par défaut",
 "Open Panel":"Ouvrir le panneau",
 "Lock Dashboard":"Verrouiller",
 "Refresh":"Actualiser",
