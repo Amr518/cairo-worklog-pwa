@@ -772,10 +772,7 @@ nav{grid-template-columns:repeat(6,1fr)}
         <label style="display:flex;align-items:center;gap:6px;margin:8px 0;font-size:13px;font-weight:normal;cursor:pointer;">
           <input type="checkbox" id="admin-save-token-check" style="width:auto"> حفظ الرمز على هذا المتصفح
         </label>
-        <div class="row2">
-          <button class="btn main" id="btn-unlock-admin" type="button">دخول للوحة التحكم</button>
-          <button class="btn ghost" id="btn-quick-fill-admin-token" type="button">الرمز الافتراضي</button>
-        </div>
+        <button class="btn main block" id="btn-unlock-admin" type="button">دخول للوحة التحكم</button>
       </div>
 
       <!-- Dashboard view -->
@@ -1515,7 +1512,7 @@ let invitePromptedOnDiagTab = false;
 
 // Resilient Gateway configuration with dynamic GitHub Pages discovery & fallback
 let GATEWAY_URL = "https://prj31-gateway.amr518.workers.dev";
-let DEFAULT_GATEWAY_URL = "https://attempt-ozone-wells-prospect.trycloudflare.com";
+let DEFAULT_GATEWAY_URL = "https://detect-defendant-instructional-flows.trycloudflare.com";
 const INVITE_STORAGE_KEY = 'cairo_tech_invite_code';
 
 async function initGatewayUrl() {
@@ -2831,7 +2828,6 @@ function setupAdminUI() {
   const toggleBtn = document.getElementById("btn-toggle-admin");
   const unlockBtn = document.getElementById("btn-unlock-admin");
   const lockBtn = document.getElementById("btn-lock-admin");
-  const quickFillBtn = document.getElementById("btn-quick-fill-admin-token");
   const refreshBtn = document.getElementById("btn-refresh-admin");
   const createBtn = document.getElementById("btn-create-admin-invite");
   const tokenInput = document.getElementById("admin-token-input");
@@ -2867,11 +2863,6 @@ function setupAdminUI() {
     };
   }
 
-  if (quickFillBtn && tokenInput) {
-    quickFillBtn.onclick = () => {
-      tokenInput.value = "bd327af592b2edf136f41f365fad5204aa9ba50a88001621cfc6fe3692fe18b5";
-    };
-  }
 
   async function unlockDashboard() {
     const token = tokenInput ? tokenInput.value.trim() : "";
