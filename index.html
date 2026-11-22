@@ -12,7 +12,7 @@
 <meta name="apple-mobile-web-app-title" content="شغلي">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#242269">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https://*.trycloudflare.com https://prj31-gateway.amr518.workers.dev https://api.openai.com http://127.0.0.1:8098 http://localhost:8098;">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https://deeper-auction-velocity-ken.trycloudflare.com https://*.trycloudflare.com https://api.openai.com http://127.0.0.1:8098 http://localhost:8098;">
 <style>
 :root{--navy:#242269;--coral:#F55B41;--green:#91C361;--blue:#323C8E;--purple:#9B7DCD;--gold:#FDC300;--lblue:#D3DEF2;--cyan:#47BFD9;--alt:#F4F5FA;--line:#dfe2ec;--ink:#1d1d2b;--muted:#6b6f86;--red:#D9534F}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -1511,17 +1511,18 @@ let brokerMode = 'gateway';
 let invitePromptedOnDiagTab = false;
 
 // Resilient Gateway configuration with dynamic GitHub Pages discovery & fallback
-let GATEWAY_URL = "https://prj31-gateway.amr518.workers.dev";
-let DEFAULT_GATEWAY_URL = "https://detect-defendant-instructional-flows.trycloudflare.com";
+let GATEWAY_URL = "https://deeper-auction-velocity-ken.trycloudflare.com";
+let DEFAULT_GATEWAY_URL = "https://deeper-auction-velocity-ken.trycloudflare.com";
 const INVITE_STORAGE_KEY = 'cairo_tech_invite_code';
 
-async function initGatewayUrl() {
+async function initGatewayUrl(forceRefresh = false) {
   try {
     const res = await fetch(`gateway_url.txt?t=${Date.now()}`, { cache: 'no-store' });
     if (res.ok) {
       const text = (await res.text()).trim();
       if (text.startsWith('http://') || text.startsWith('https://')) {
         GATEWAY_URL = text;
+        DEFAULT_GATEWAY_URL = text;
         console.log('[Gateway] Active gateway locked dynamically:', GATEWAY_URL);
         return;
       }
@@ -1529,8 +1530,21 @@ async function initGatewayUrl() {
   } catch (e) {
     console.warn('[Gateway] Could not fetch gateway_url.txt, using fallback:', e);
   }
-  GATEWAY_URL = DEFAULT_GATEWAY_URL;
-  console.log('[Gateway] Using fallback gateway:', GATEWAY_URL);
+  if (!GATEWAY_URL || forceRefresh) {
+    GATEWAY_URL = DEFAULT_GATEWAY_URL;
+  }
+  console.log('[Gateway] Using gateway:', GATEWAY_URL);
+}
+
+async function fetchWithGatewayRetry(endpointPath, fetchOptions = {}) {
+  const cleanPath = endpointPath.startsWith('/') ? endpointPath : '/' + endpointPath;
+  try {
+    return await fetch(`${GATEWAY_URL}${cleanPath}`, fetchOptions);
+  } catch (err) {
+    console.warn('[Gateway] Fetch failed on', `${GATEWAY_URL}${cleanPath}`, err, '- Attempting re-sync and retry...');
+    await initGatewayUrl(true);
+    return await fetch(`${GATEWAY_URL}${cleanPath}`, fetchOptions);
+  }
 }
 
 function getInviteCode() {
@@ -2210,7 +2224,7 @@ async function sendQuery() {
     };
 
     try {
-      const createRes = await fetch(`${GATEWAY_URL}/v1/job`, {
+      const createRes = await fetchWithGatewayRetry('/v1/job', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -2249,7 +2263,7 @@ async function sendQuery() {
             : tr('جاري استكمال البحث في الكتالوج ومطابقة قطع الغيار (المحاولة 2 من 2)...');
         }
 
-        const pollRes = await fetch(`${GATEWAY_URL}/v1/job/${encodeURIComponent(jobId)}/result?wait=25`, {
+        const pollRes = await fetchWithGatewayRetry(`/v1/job/${encodeURIComponent(jobId)}/result?wait=25`, {
           method: 'GET',
           headers: {
             'X-Invite-Code': inviteCode
@@ -2541,7 +2555,7 @@ if (btnConfirmClose) {
       try {
         const inviteCode = getInviteCode();
         const notesText = notes || tr('تم حل العطل وإغلاق الجلسة بواسطة الفني.');
-        const closeRes = await fetch(`${GATEWAY_URL}/v1/job/${encodeURIComponent(currentSessionId)}/close`, {
+        const closeRes = await fetchWithGatewayRetry(`/v1/job/${encodeURIComponent(currentSessionId)}/close`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
