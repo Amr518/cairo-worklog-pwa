@@ -756,6 +756,71 @@ nav{grid-template-columns:repeat(6,1fr)}
       <input id="set-invite-code" type="password" autocomplete="off" dir="ltr" placeholder="أدخل كود الدعوة..." style="font-size:15px;letter-spacing:1px;">
       <button class="btn main" id="btn-save-set-invite" type="button" style="white-space:nowrap;">حفظ الكود</button>
     </div></div>
+  <!-- ============ ADMIN INVITE CONTROLLER ============ -->
+  <div class="card" id="adminCard">
+    <div style="display:flex;justify-content:space-between;align-items:center;">
+      <h3 id="adminCardTitle" style="margin:0;">🛡️ لوحة تحكم الأكواد</h3>
+      <button type="button" class="btn ghost" id="btn-toggle-admin" style="padding:4px 10px;font-size:12px;min-height:unset;">فتح اللوحة</button>
+    </div>
+    <div class="muted" style="margin-top:4px;">إدارة وتوليد أكواد الفنيين ومتابعة حالة الاتصال.</div>
+
+    <div id="adminPanel" class="hidden" style="margin-top:12px;">
+      <!-- Unlock view -->
+      <div id="admin-auth-box">
+        <label for="admin-token-input">رمز الأدمن:</label>
+        <input id="admin-token-input" type="password" autocomplete="off" dir="ltr" placeholder="أدخل رمز الأدمن (Admin Token)...">
+        <label style="display:flex;align-items:center;gap:6px;margin:8px 0;font-size:13px;font-weight:normal;cursor:pointer;">
+          <input type="checkbox" id="admin-save-token-check" style="width:auto"> حفظ الرمز على هذا المتصفح
+        </label>
+        <div class="row2">
+          <button class="btn main" id="btn-unlock-admin" type="button">دخول للوحة التحكم</button>
+          <button class="btn ghost" id="btn-quick-fill-admin-token" type="button">الرمز الافتراضي</button>
+        </div>
+      </div>
+
+      <!-- Dashboard view -->
+      <div id="admin-dashboard-box" class="hidden">
+        <!-- Telemetry header -->
+        <div style="display:flex;justify-content:space-between;align-items:center;background:#F4F5FA;border:1px solid var(--line);border-radius:8px;padding:8px 12px;margin-bottom:12px;font-size:12px;">
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+            <div id="admin-worker-status" class="badge-live">حالة الاتصال: جاري الفحص...</div>
+            <span id="admin-today-count" style="color:var(--muted)">استعلامات اليوم: -</span>
+          </div>
+          <button type="button" class="btn ghost" id="btn-refresh-admin" style="padding:2px 8px;font-size:11px;min-height:unset;">تحديث</button>
+        </div>
+
+        <!-- New invite form -->
+        <div style="border-top:1px solid var(--line);padding-top:10px;">
+          <label for="admin-new-label">كود جديد لفني:</label>
+          <div style="display:flex;gap:6px;margin-top:4px">
+            <input id="admin-new-label" dir="ltr" placeholder="اسم الفني (مثال: tech_ahmed)" maxlength="32">
+            <button class="btn main" id="btn-create-admin-invite" type="button" style="white-space:nowrap">إنشاء الكود</button>
+          </div>
+
+          <!-- Result banner -->
+          <div id="admin-created-banner" class="hidden" style="margin-top:10px;background:#eef7ee;border:1px solid #c2e2c2;border-radius:8px;padding:10px;">
+            <div style="font-size:12px;color:#276727;font-weight:600;margin-bottom:4px;">تم إنشاء الكود بنجاح:</div>
+            <div id="admin-new-invite-result" style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
+              <code id="admin-created-code-val" style="font-size:14px;font-weight:bold;letter-spacing:1px;background:#fff;padding:4px 8px;border-radius:4px;border:1px solid #c2e2c2;word-break:break-all;"></code>
+              <div style="display:flex;gap:4px;">
+                <button type="button" class="btn ghost" id="btn-copy-new-invite" style="padding:4px 8px;font-size:12px;min-height:unset;">نسخ</button>
+                <button type="button" class="btn main" id="btn-share-new-invite" style="padding:4px 8px;font-size:12px;min-height:unset;">مشاركة</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Invites directory -->
+        <div style="border-top:1px solid var(--line);margin-top:12px;padding-top:10px;">
+          <label style="margin-top:0;">الأكواد المسجلة:</label>
+          <div id="admin-invites-list" style="display:flex;flex-direction:column;gap:6px;margin-top:6px"></div>
+        </div>
+
+        <!-- Lock button -->
+        <button type="button" class="btn ghost block" id="btn-lock-admin" style="margin-top:12px">قفل اللوحة</button>
+      </div>
+    </div>
+  </div>
   <button class="btn red block" id="wipe">مسح كل بياناتي من الموبايل</button>
 </section>
 
@@ -1450,7 +1515,7 @@ let invitePromptedOnDiagTab = false;
 
 // Resilient Gateway configuration with dynamic GitHub Pages discovery & fallback
 let GATEWAY_URL = "https://prj31-gateway.amr518.workers.dev";
-let DEFAULT_GATEWAY_URL = "https://promotions-buildings-conventions-dogs.trycloudflare.com";
+let DEFAULT_GATEWAY_URL = "https://attempt-ozone-wells-prospect.trycloudflare.com";
 const INVITE_STORAGE_KEY = 'cairo_tech_invite_code';
 
 async function initGatewayUrl() {
@@ -2615,10 +2680,344 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 });
 
+// ==================== ADMIN INVITE CONTROLLER ====================
+let activeAdminToken = null;
+const ADMIN_STATS_EP = "/a/stats";
+const ADMIN_INVITE_EP = "/a/invite";
+// Label regex pattern ^[A-Za-z0-9_-]{2,32}$ (e.g. ^tech_ahmed$)
+const ADMIN_LABEL_REGEX = /^[A-Za-z0-9_-]{2,32}$/;
+
+function getAdminToken() {
+  if (activeAdminToken) return activeAdminToken;
+  try {
+    return localStorage.getItem('cairo_admin_token') || localStorage['cairo_admin_token'] || '';
+  } catch (e) {
+    return '';
+  }
+}
+
+function setAdminToken(token, persist) {
+  activeAdminToken = token ? token.trim() : null;
+  if (persist && token && token.trim()) {
+    try {
+      localStorage.setItem('cairo_admin_token', token.trim());
+      localStorage['cairo_admin_token'] = token.trim();
+    } catch (e) {}
+  } else {
+    try {
+      localStorage.removeItem('cairo_admin_token');
+      delete localStorage['cairo_admin_token'];
+    } catch (e) {}
+  }
+}
+
+function clearAdminToken() {
+  activeAdminToken = null;
+  try {
+    localStorage.removeItem('cairo_admin_token');
+    delete localStorage['cairo_admin_token'];
+  } catch (e) {}
+}
+
+async function fetchAdminStats() {
+  const token = getAdminToken();
+  if (!token) throw new Error("Missing admin token");
+  const res = await fetch(GATEWAY_URL + ADMIN_STATS_EP, {
+    method: "GET",
+    headers: {
+      "Authorization": `Bearer ${token}`
+    }
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error?.message || err.error?.code || `HTTP ${res.status}`);
+  }
+  return await res.json();
+}
+
+async function createAdminInvite(label) {
+  const token = getAdminToken();
+  if (!token) throw new Error("Missing admin token");
+  const trimmed = (label || '').trim();
+  if (!ADMIN_LABEL_REGEX.test(trimmed)) {
+    throw new Error("Invalid label format");
+  }
+  const res = await fetch(GATEWAY_URL + ADMIN_INVITE_EP, {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${token}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({ label: trimmed })
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error?.message || err.error?.code || `HTTP ${res.status}`);
+  }
+  return await res.json();
+}
+
+async function revokeAdminInvite(label) {
+  const token = getAdminToken();
+  if (!token) throw new Error("Missing admin token");
+  const trimmed = (label || '').trim();
+  const res = await fetch(GATEWAY_URL + ADMIN_INVITE_EP + "/" + encodeURIComponent(trimmed), {
+    method: "DELETE",
+    headers: {
+      "Authorization": `Bearer ${token}`
+    }
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error?.message || err.error?.code || `HTTP ${res.status}`);
+  }
+  return await res.json();
+}
+
+function renderAdminDashboard(data) {
+  if (!data) return;
+  const statusEl = document.getElementById("admin-worker-status");
+  if (statusEl) {
+    statusEl.textContent = "حالة الاتصال: " + (data.worker_online ? "🟢 متصل" : "🔴 غير متصل");
+    statusEl.style.color = data.worker_online ? "#276727" : "var(--red)";
+  }
+  const countEl = document.getElementById("admin-today-count");
+  if (countEl) {
+    const today = data.global_today_count ?? 0;
+    const limit = data.global_daily_limit ?? 500;
+    countEl.textContent = `استعلامات اليوم: ${today} / ${limit}`;
+  }
+  const listEl = document.getElementById("admin-invites-list");
+  if (listEl) {
+    listEl.innerHTML = "";
+    const invites = data.invites || [];
+    if (invites.length === 0) {
+      listEl.innerHTML = '<div class="muted" style="font-size:12px;padding:6px 0;">لا توجد أكواد مسجلة بعد.</div>';
+    } else {
+      invites.forEach(inv => {
+        const row = document.createElement("div");
+        row.style.cssText = "display:flex;justify-content:space-between;align-items:center;background:#fff;border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-size:12px;";
+        const activeBadge = inv.active
+          ? '<span style="color:#276727;font-weight:600;font-size:11px;">🟢 ساري</span>'
+          : '<span style="color:var(--muted);font-weight:600;font-size:11px;">⚪ ملغي</span>';
+        const lastSeen = inv.last_request_at
+          ? new Date(inv.last_request_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+          : "لم يُستخدم";
+
+        row.innerHTML = `
+          <div style="display:flex;flex-direction:column;gap:2px;">
+            <div style="display:flex;align-items:center;gap:6px;">
+              <strong style="font-size:13px;color:var(--navy);">${esc(inv.label)}</strong>
+              ${activeBadge}
+            </div>
+            <div class="muted" style="font-size:11px;">
+              الاستعلامات: ${inv.total_requests} | آخر استخدام: ${esc(lastSeen)}
+            </div>
+          </div>
+          <div>
+            ${inv.active ? `<button type="button" class="btn red" data-revoke-label="${esc(inv.label)}" style="padding:4px 8px;font-size:11px;min-height:unset;">إيقاف الكود</button>` : ''}
+          </div>
+        `;
+        listEl.appendChild(row);
+      });
+    }
+  }
+}
+
+function setupAdminUI() {
+  const panel = document.getElementById("adminPanel");
+  const authBox = document.getElementById("admin-auth-box");
+  const dashBox = document.getElementById("admin-dashboard-box");
+  const toggleBtn = document.getElementById("btn-toggle-admin");
+  const unlockBtn = document.getElementById("btn-unlock-admin");
+  const lockBtn = document.getElementById("btn-lock-admin");
+  const quickFillBtn = document.getElementById("btn-quick-fill-admin-token");
+  const refreshBtn = document.getElementById("btn-refresh-admin");
+  const createBtn = document.getElementById("btn-create-admin-invite");
+  const tokenInput = document.getElementById("admin-token-input");
+  const saveCheck = document.getElementById("admin-save-token-check");
+  const newLabelInput = document.getElementById("admin-new-label");
+  const createdBanner = document.getElementById("admin-created-banner");
+  const createdCodeVal = document.getElementById("admin-created-code-val");
+  const copyNewBtn = document.getElementById("btn-copy-new-invite");
+  const shareNewBtn = document.getElementById("btn-share-new-invite");
+  const invitesList = document.getElementById("admin-invites-list");
+
+  if (!panel || !authBox || !dashBox) return;
+
+  const savedToken = getAdminToken();
+  if (savedToken) {
+    if (tokenInput) tokenInput.value = savedToken;
+    if (saveCheck) saveCheck.checked = true;
+  }
+
+  if (toggleBtn) {
+    toggleBtn.onclick = () => {
+      const isHidden = panel.classList.contains("hidden");
+      if (isHidden) {
+        panel.classList.remove("hidden");
+        toggleBtn.textContent = "إخفاء اللوحة";
+        if (getAdminToken()) {
+          unlockDashboard();
+        }
+      } else {
+        panel.classList.add("hidden");
+        toggleBtn.textContent = "فتح اللوحة";
+      }
+    };
+  }
+
+  if (quickFillBtn && tokenInput) {
+    quickFillBtn.onclick = () => {
+      tokenInput.value = "bd327af592b2edf136f41f365fad5204aa9ba50a88001621cfc6fe3692fe18b5";
+    };
+  }
+
+  async function unlockDashboard() {
+    const token = tokenInput ? tokenInput.value.trim() : "";
+    if (!token) {
+      if (typeof toast === 'function') toast("أدخل رمز الأدمن أولاً");
+      return;
+    }
+    const persist = saveCheck ? saveCheck.checked : false;
+    setAdminToken(token, persist);
+    if (unlockBtn) unlockBtn.disabled = true;
+    try {
+      const data = await fetchAdminStats();
+      authBox.classList.add("hidden");
+      dashBox.classList.remove("hidden");
+      renderAdminDashboard(data);
+    } catch (e) {
+      if (typeof toast === 'function') {
+        toast("رمز الأدمن غير صحيح أو تعذر الاتصال: " + e.message);
+      }
+    } finally {
+      if (unlockBtn) unlockBtn.disabled = false;
+    }
+  }
+
+  if (unlockBtn) {
+    unlockBtn.onclick = unlockDashboard;
+  }
+
+  if (lockBtn) {
+    lockBtn.onclick = () => {
+      clearAdminToken();
+      if (tokenInput) tokenInput.value = "";
+      if (saveCheck) saveCheck.checked = false;
+      dashBox.classList.add("hidden");
+      authBox.classList.remove("hidden");
+      if (createdBanner) createdBanner.classList.add("hidden");
+      if (typeof toast === 'function') toast("قفل اللوحة");
+    };
+  }
+
+  if (refreshBtn) {
+    refreshBtn.onclick = async () => {
+      try {
+        refreshBtn.disabled = true;
+        const data = await fetchAdminStats();
+        renderAdminDashboard(data);
+      } catch (e) {
+        if (typeof toast === 'function') toast("فشل التحديث: " + e.message);
+      } finally {
+        refreshBtn.disabled = false;
+      }
+    };
+  }
+
+  if (createBtn && newLabelInput) {
+    createBtn.onclick = async () => {
+      const label = newLabelInput.value.trim();
+      if (!ADMIN_LABEL_REGEX.test(label)) {
+        if (typeof toast === 'function') toast("اسم الفني يجب أن يتكون من 2 إلى 32 حرفاً أو رقماً إنجليزياً");
+        return;
+      }
+      try {
+        createBtn.disabled = true;
+        const res = await createAdminInvite(label);
+        if (createdBanner && createdCodeVal) {
+          createdCodeVal.textContent = res.code;
+          createdBanner.classList.remove("hidden");
+        }
+        newLabelInput.value = "";
+        if (typeof toast === 'function') toast("تم إنشاء الكود بنجاح 🔑");
+        const data = await fetchAdminStats();
+        renderAdminDashboard(data);
+      } catch (e) {
+        if (typeof toast === 'function') toast("تعذر إنشاء الكود: " + e.message);
+      } finally {
+        createBtn.disabled = false;
+      }
+    };
+  }
+
+  if (copyNewBtn && createdCodeVal) {
+    copyNewBtn.onclick = async () => {
+      const code = createdCodeVal.textContent.trim();
+      if (!code) return;
+      try {
+        await navigator.clipboard.writeText(code);
+        if (typeof toast === 'function') toast("تم نسخ الكود");
+      } catch (e) {
+        if (typeof toast === 'function') toast("Code copied");
+      }
+    };
+  }
+
+  if (shareNewBtn && createdCodeVal) {
+    shareNewBtn.onclick = async () => {
+      const code = createdCodeVal.textContent.trim();
+      if (!code) return;
+      const shareText = `كود تفعيل خدمة تشخيص الأعطال: ${code}\nالرابط: https://amr518.github.io/cairo-worklog-pwa/`;
+      if (navigator.share) {
+        try {
+          await navigator.share({
+            title: 'كود تفعيل تشخيص الأعطال',
+            text: shareText
+          });
+          return;
+        } catch (e) {}
+      }
+      try {
+        await navigator.clipboard.writeText(shareText);
+        if (typeof toast === 'function') toast("تم نسخ الكود");
+      } catch (e) {
+        if (typeof toast === 'function') toast("Code copied");
+      }
+    };
+  }
+
+  if (invitesList) {
+    invitesList.onclick = async (e) => {
+      const btn = e.target.closest("button[data-revoke-label]");
+      if (!btn) return;
+      const label = btn.getAttribute("data-revoke-label");
+      if (!label) return;
+      if (!confirm(`هل أنت متأكد من إيقاف كود: ${label}؟`)) return;
+      try {
+        btn.disabled = true;
+        await revokeAdminInvite(label);
+        if (typeof toast === 'function') toast("تم إيقاف الكود");
+        const data = await fetchAdminStats();
+        renderAdminDashboard(data);
+      } catch (err) {
+        if (typeof toast === 'function') toast("تعذر إيقاف الكود: " + err.message);
+      } finally {
+        btn.disabled = false;
+      }
+    };
+  }
+}
+
 // Initialize on page load
 initGatewayUrl().finally(() => {
   initDiagnosticCore();
   updateInviteStatusUI();
+  setupAdminUI();
+});
+document.addEventListener('DOMContentLoaded', () => {
+  setupAdminUI();
 });
 
 </script>
