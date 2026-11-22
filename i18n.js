@@ -220,7 +220,6 @@ const D={
 "حفظ الرمز على هذا المتصفح":"Remember token on this browser",
 "دخول للوحة التحكم":"Unlock Dashboard",
 "فتح لوحة التحكم":"Unlock Dashboard",
-"الرمز الافتراضي":"Default Token",
 "فتح اللوحة":"Open Panel",
 "قفل اللوحة":"Lock Dashboard",
 "تحديث":"Refresh",
