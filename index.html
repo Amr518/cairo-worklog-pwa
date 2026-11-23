@@ -2255,19 +2255,25 @@ async function sendQuery() {
       }
       currentSessionId = jobId;
 
-      for (let attempt = 1; attempt <= 5; attempt++) {
+      for (let attempt = 1; attempt <= 8; attempt++) {
         const statusSpan = document.getElementById(`load-status-${loadingId}`);
         if (statusSpan) {
           if (attempt === 1) {
             statusSpan.textContent = tr('مطابقة كود العطل ومراجعة خطوات الإصلاح المعتمدة...');
           } else if (attempt === 2) {
-            statusSpan.textContent = tr('جاري استكمال البحث في الكتالوج ومطابقة قطع الغيار (المحاولة 2 من 5)...');
+            statusSpan.textContent = tr('جاري استكمال البحث في الكتالوج ومطابقة قطع الغيار (المحاولة 2 من 8)...');
           } else if (attempt === 3) {
-            statusSpan.textContent = tr('استخلاص مواصفات الأجزاء الفنية وتوصيات الكتالوج (المحاولة 3 من 5)...');
+            statusSpan.textContent = tr('استخلاص مواصفات الأجزاء الفنية وتوصيات الكتالوج (المحاولة 3 من 8)...');
           } else if (attempt === 4) {
-            statusSpan.textContent = tr('التحقق من جداول الصيانة وتحديث النتائج (المحاولة 4 من 5)...');
+            statusSpan.textContent = tr('التحقق من جداول الصيانة وتحديث النتائج (المحاولة 4 من 8)...');
+          } else if (attempt === 5) {
+            statusSpan.textContent = tr('مراجعة أرصدة قطع الغيار وسجلات المخزن (المحاولة 5 من 8)...');
+          } else if (attempt === 6) {
+            statusSpan.textContent = tr('تجهيز التوصيات الفنية وإعداد بطاقات القطع (المحاولة 6 من 8)...');
+          } else if (attempt === 7) {
+            statusSpan.textContent = tr('استكمال المراجعة الفنية لقوائم الصيانة (المحاولة 7 من 8)...');
           } else {
-            statusSpan.textContent = tr('الانتهاء من صياغة التشخيص النهائي وتجهيز الرد (المحاولة 5 من 5)...');
+            statusSpan.textContent = tr('الانتهاء من صياغة التشخيص النهائي وتجهيز الرد (المحاولة 8 من 8)...');
           }
         }
 
@@ -2285,12 +2291,19 @@ async function sendQuery() {
           const parts = resultData.suggested_parts || [];
           window.latestDiagSolution = solution;
           window.latestDiagParts = parts;
-          appendMessage('assistant', solution || tr('لم يتم العثور على تشخيص مطابق لكود العطل المدخل.'), parts);
-          return;
+
+          if (resultData.parts_pending === true) {
+            appendMessage('assistant', solution || tr('لم يتم العثور على تشخيص مطابق لكود العطل المدخل.'), [], true, jobId);
+            pollForFinalParts(jobId, attempt + 1, 8, inviteCode);
+            return;
+          } else {
+            appendMessage('assistant', solution || tr('لم يتم العثور على تشخيص مطابق لكود العطل المدخل.'), parts);
+            return;
+          }
         }
 
         if (pollRes.status === 202) {
-          if (attempt === 5) {
+          if (attempt === 8) {
             cleanupLoading();
             appendMessage('assistant', tr('⏳ استغرق الفحص وقتاً أطول من المعتاد. يرجى المحاولة مرة أخرى بعد لحظات أو التأكد من تشغيل خادم التشخيص بالمصنع.'));
             return;
@@ -2352,7 +2365,56 @@ function escapeHtml(str) {
     .replace(/>/g, '&gt;');
 }
 
-function appendMessage(role, text, parts) {
+function buildPartsGrid(parts) {
+  if (!parts || parts.length === 0) return null;
+  const tr = (window.I18N && typeof window.I18N.tr === 'function') ? window.I18N.tr : (s => s);
+  const partsDiv = document.createElement('div');
+  partsDiv.className = 'parts-grid';
+  partsDiv.innerHTML = '<div style="font-size: 12px; font-weight: bold; color: var(--navy); margin-top: 8px; display: flex; align-items: center; gap: 6px;"><span>⚙️</span><span>' + tr('قطع الغيار والمكونات المرتبطة بالعطل') + ' (' + parts.length + '):</span></div>';
+
+  parts.forEach(p => {
+    const card = document.createElement('div');
+    card.className = 'part-card';
+
+    const partName = p.part_name || p.name || p.name_en || tr('صنف غير مسمى');
+    const partCode = p.part_code || p.code || p.code_hint || (p.item_number || tr('بدون كود'));
+    const rawQty = (p.qty_on_hand !== undefined && p.qty_on_hand !== null) ? Number(p.qty_on_hand) : (p.qty !== undefined ? Number(p.qty) : 0);
+    const qty = isNaN(rawQty) ? 0 : rawQty;
+    const location = (p.location || p.bin || '').trim();
+    const warehouse = (p.warehouse || p.business_unit || '').trim();
+    const role = (p.role_ar || p.role || '').trim();
+    const stockStatus = p.stock_status || (qty > 0 ? 'IN_STOCK' : 'OUT_OF_STOCK');
+
+    let stockClass = (qty > 0 || stockStatus === 'IN_STOCK') ? 'in' : 'out';
+    let stockLabel = stockClass === 'in' ? tr('متوفر') : tr('غير متوفر');
+
+    let locHtml = '';
+    if (location && location !== 'غير مدرج') {
+      const whText = warehouse ? ` <span style="color:var(--muted)">[${escapeHtml(warehouse)}]</span>` : '';
+      locHtml = `<span class="part-meta-item">${tr('📍 البن / الرف:')} <b style="color:var(--coral); font-family:monospace;">${escapeHtml(location)}</b>${whText}</span>`;
+    } else {
+      locHtml = `<span class="part-meta-item" style="color:var(--muted)">${tr('📍 المخزن: غير مسجل في الجرد')}</span>`;
+    }
+
+    const roleHtml = role ? `<div class="part-role">💡 <b>${tr('💡 الدور الفني:')}</b> ${escapeHtml(role)}</div>` : '';
+
+    card.innerHTML = `
+      <div class="part-header">
+        <div class="part-title">${escapeHtml(partName)}</div>
+        <span class="stock-tag ${stockClass}">${stockLabel}</span>
+      </div>
+      <div class="part-meta">
+        <span class="part-meta-item">${tr('🔢 رقم القطعة (Part No):')} <b style="font-family:monospace;letter-spacing:0.5px;">${escapeHtml(partCode)}</b></span>
+        ${locHtml}
+      </div>
+      ${roleHtml}
+    `;
+    partsDiv.appendChild(card);
+  });
+  return partsDiv;
+}
+
+function appendMessage(role, text, parts, partsPending = false, jobId = null) {
   const msgDiv = document.createElement('div');
   msgDiv.className = `message ${role}`;
   
@@ -2399,52 +2461,19 @@ function appendMessage(role, text, parts) {
     msgDiv.appendChild(actionRow);
   }
 
-  if (parts && parts.length > 0) {
+  if (partsPending && jobId) {
     const tr = (window.I18N && typeof window.I18N.tr === 'function') ? window.I18N.tr : (s => s);
-    const partsDiv = document.createElement('div');
-    partsDiv.className = 'parts-grid';
-    partsDiv.innerHTML = '<div style="font-size: 12px; font-weight: bold; color: var(--navy); margin-top: 8px; display: flex; align-items: center; gap: 6px;"><span>⚙️</span><span>' + tr('قطع الغيار والمكونات المرتبطة بالعطل') + ' (' + parts.length + '):</span></div>';
+    const loader = document.createElement('div');
+    loader.id = `parts-loader-${jobId}`;
+    loader.className = 'parts-inline-loader';
+    loader.style.cssText = 'margin-top:12px;padding:10px 14px;background:rgba(217,119,6,0.08);border-radius:10px;border:1px dashed #d97706;color:#b45309;font-size:13px;display:flex;align-items:center;gap:8px;';
+    loader.innerHTML = `<span class="diag-spin">🔄</span><span>${tr('جاري مطابقة قطع الغيار مع أرصدة المخزن...')}</span>`;
+    msgDiv.appendChild(loader);
+  }
 
-    parts.forEach(p => {
-      const card = document.createElement('div');
-      card.className = 'part-card';
-
-      const partName = p.part_name || p.name || p.name_en || tr('صنف غير مسمى');
-      const partCode = p.part_code || p.code || p.code_hint || (p.item_number || tr('بدون كود'));
-      const rawQty = (p.qty_on_hand !== undefined && p.qty_on_hand !== null) ? Number(p.qty_on_hand) : (p.qty !== undefined ? Number(p.qty) : 0);
-      const qty = isNaN(rawQty) ? 0 : rawQty;
-      const location = (p.location || p.bin || '').trim();
-      const warehouse = (p.warehouse || p.business_unit || '').trim();
-      const role = (p.role_ar || p.role || '').trim();
-      const stockStatus = p.stock_status || (qty > 0 ? 'IN_STOCK' : 'OUT_OF_STOCK');
-
-      let stockClass = (qty > 0 || stockStatus === 'IN_STOCK') ? 'in' : 'out';
-      let stockLabel = stockClass === 'in' ? tr('متوفر') : tr('غير متوفر');
-
-      let locHtml = '';
-      if (location && location !== 'غير مدرج') {
-        const whText = warehouse ? ` <span style="color:var(--muted)">[${escapeHtml(warehouse)}]</span>` : '';
-        locHtml = `<span class="part-meta-item">${tr('📍 البن / الرف:')} <b style="color:var(--coral); font-family:monospace;">${escapeHtml(location)}</b>${whText}</span>`;
-      } else {
-        locHtml = `<span class="part-meta-item" style="color:var(--muted)">${tr('📍 المخزن: غير مسجل في الجرد')}</span>`;
-      }
-
-      const roleHtml = role ? `<div class="part-role">💡 <b>${tr('💡 الدور الفني:')}</b> ${escapeHtml(role)}</div>` : '';
-
-      card.innerHTML = `
-        <div class="part-header">
-          <div class="part-title">${escapeHtml(partName)}</div>
-          <span class="stock-tag ${stockClass}">${stockLabel}</span>
-        </div>
-        <div class="part-meta">
-          <span class="part-meta-item">${tr('🔢 رقم القطعة (Part No):')} <b style="font-family:monospace;letter-spacing:0.5px;">${escapeHtml(partCode)}</b></span>
-          ${locHtml}
-        </div>
-        ${roleHtml}
-      `;
-      partsDiv.appendChild(card);
-    });
-    msgDiv.appendChild(partsDiv);
+  if (parts && parts.length > 0) {
+    const grid = buildPartsGrid(parts);
+    if (grid) msgDiv.appendChild(grid);
   }
 
   const meta = document.createElement('div');
@@ -2454,6 +2483,47 @@ function appendMessage(role, text, parts) {
 
   messagesArea.appendChild(msgDiv);
   messagesArea.scrollTop = messagesArea.scrollHeight;
+}
+
+async function pollForFinalParts(jobId, startAttempt, maxAttempts, inviteCode) {
+  try {
+    for (let attempt = startAttempt; attempt <= maxAttempts; attempt++) {
+      const pollRes = await fetchWithGatewayRetry(`/v1/job/${encodeURIComponent(jobId)}/result?wait=25`, {
+        method: 'GET',
+        headers: {
+          'X-Invite-Code': inviteCode
+        }
+      });
+      if (pollRes.status === 200) {
+        const resData = await pollRes.json();
+        if (resData.parts_pending !== true) {
+          const parts = resData.suggested_parts || [];
+          window.latestDiagParts = parts;
+          const loader = document.getElementById(`parts-loader-${jobId}`);
+          if (loader) {
+            if (parts.length > 0) {
+              const grid = buildPartsGrid(parts);
+              if (grid) {
+                loader.replaceWith(grid);
+              } else {
+                loader.remove();
+              }
+            } else {
+              loader.remove();
+            }
+          }
+          return;
+        }
+      } else if (pollRes.status !== 202) {
+        break;
+      }
+    }
+  } catch (e) {
+    console.warn('Background parts polling interrupted:', e);
+  } finally {
+    const loader = document.getElementById(`parts-loader-${jobId}`);
+    if (loader) loader.remove();
+  }
 }
 
 // Transfer to WorkLog
