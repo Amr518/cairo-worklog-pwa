@@ -2255,12 +2255,20 @@ async function sendQuery() {
       }
       currentSessionId = jobId;
 
-      for (let attempt = 1; attempt <= 2; attempt++) {
+      for (let attempt = 1; attempt <= 5; attempt++) {
         const statusSpan = document.getElementById(`load-status-${loadingId}`);
         if (statusSpan) {
-          statusSpan.textContent = attempt === 1
-            ? tr('مطابقة كود العطل ومراجعة خطوات الإصلاح المعتمدة...')
-            : tr('جاري استكمال البحث في الكتالوج ومطابقة قطع الغيار (المحاولة 2 من 2)...');
+          if (attempt === 1) {
+            statusSpan.textContent = tr('مطابقة كود العطل ومراجعة خطوات الإصلاح المعتمدة...');
+          } else if (attempt === 2) {
+            statusSpan.textContent = tr('جاري استكمال البحث في الكتالوج ومطابقة قطع الغيار (المحاولة 2 من 5)...');
+          } else if (attempt === 3) {
+            statusSpan.textContent = tr('استخلاص مواصفات الأجزاء الفنية وتوصيات الكتالوج (المحاولة 3 من 5)...');
+          } else if (attempt === 4) {
+            statusSpan.textContent = tr('التحقق من جداول الصيانة وتحديث النتائج (المحاولة 4 من 5)...');
+          } else {
+            statusSpan.textContent = tr('الانتهاء من صياغة التشخيص النهائي وتجهيز الرد (المحاولة 5 من 5)...');
+          }
         }
 
         const pollRes = await fetchWithGatewayRetry(`/v1/job/${encodeURIComponent(jobId)}/result?wait=25`, {
@@ -2282,7 +2290,7 @@ async function sendQuery() {
         }
 
         if (pollRes.status === 202) {
-          if (attempt === 2) {
+          if (attempt === 5) {
             cleanupLoading();
             appendMessage('assistant', tr('⏳ استغرق الفحص وقتاً أطول من المعتاد. يرجى المحاولة مرة أخرى بعد لحظات أو التأكد من تشغيل خادم التشخيص بالمصنع.'));
             return;
