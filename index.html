@@ -2255,25 +2255,15 @@ async function sendQuery() {
       }
       currentSessionId = jobId;
 
-      for (let attempt = 1; attempt <= 8; attempt++) {
+      for (let attempt = 1; attempt <= 24; attempt++) {
         const statusSpan = document.getElementById(`load-status-${loadingId}`);
         if (statusSpan) {
           if (attempt === 1) {
             statusSpan.textContent = tr('مطابقة كود العطل ومراجعة خطوات الإصلاح المعتمدة...');
-          } else if (attempt === 2) {
-            statusSpan.textContent = tr('جاري استكمال البحث في الكتالوج ومطابقة قطع الغيار (المحاولة 2 من 8)...');
-          } else if (attempt === 3) {
-            statusSpan.textContent = tr('استخلاص مواصفات الأجزاء الفنية وتوصيات الكتالوج (المحاولة 3 من 8)...');
-          } else if (attempt === 4) {
-            statusSpan.textContent = tr('التحقق من جداول الصيانة وتحديث النتائج (المحاولة 4 من 8)...');
-          } else if (attempt === 5) {
-            statusSpan.textContent = tr('مراجعة أرصدة قطع الغيار وسجلات المخزن (المحاولة 5 من 8)...');
-          } else if (attempt === 6) {
-            statusSpan.textContent = tr('تجهيز التوصيات الفنية وإعداد بطاقات القطع (المحاولة 6 من 8)...');
-          } else if (attempt === 7) {
-            statusSpan.textContent = tr('استكمال المراجعة الفنية لقوائم الصيانة (المحاولة 7 من 8)...');
+          } else if (attempt === 24) {
+            statusSpan.textContent = tr('الانتهاء من صياغة التشخيص النهائي وتجهيز الرد (المحاولة 24 من 24)...');
           } else {
-            statusSpan.textContent = tr('الانتهاء من صياغة التشخيص النهائي وتجهيز الرد (المحاولة 8 من 8)...');
+            statusSpan.textContent = tr(`جاري استكمال البحث في الكتالوج المعتمد ومطابقة قطع الغيار (المحاولة ${attempt} من 24)...`);
           }
         }
 
@@ -2294,7 +2284,7 @@ async function sendQuery() {
 
           if (resultData.parts_pending === true) {
             appendMessage('assistant', solution || tr('لم يتم العثور على تشخيص مطابق لكود العطل المدخل.'), [], true, jobId);
-            pollForFinalParts(jobId, attempt + 1, 8, inviteCode);
+            pollForFinalParts(jobId, attempt + 1, 24, inviteCode);
             return;
           } else {
             appendMessage('assistant', solution || tr('لم يتم العثور على تشخيص مطابق لكود العطل المدخل.'), parts);
@@ -2303,7 +2293,7 @@ async function sendQuery() {
         }
 
         if (pollRes.status === 202) {
-          if (attempt === 8) {
+          if (attempt === 24) {
             cleanupLoading();
             appendMessage('assistant', tr('⏳ استغرق الفحص وقتاً أطول من المعتاد. يرجى المحاولة مرة أخرى بعد لحظات أو التأكد من تشغيل خادم التشخيص بالمصنع.'));
             return;
@@ -2485,7 +2475,7 @@ function appendMessage(role, text, parts, partsPending = false, jobId = null) {
   messagesArea.scrollTop = messagesArea.scrollHeight;
 }
 
-async function pollForFinalParts(jobId, startAttempt, maxAttempts, inviteCode) {
+async function pollForFinalParts(jobId, startAttempt, maxAttempts = 24, inviteCode) {
   try {
     for (let attempt = startAttempt; attempt <= maxAttempts; attempt++) {
       const pollRes = await fetchWithGatewayRetry(`/v1/job/${encodeURIComponent(jobId)}/result?wait=25`, {
