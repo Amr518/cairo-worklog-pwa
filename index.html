@@ -1471,7 +1471,20 @@ $("#saveBtn").onclick=saveEntry;$("#cancelBtn").onclick=clearDraft;
 $("#gGo").onclick=()=>{const n=$("#gName").value.trim();if(!n)return toast("اكتب اسمك");S.profile={name:n,role:$("#gRole").value};save();$("#gate").classList.remove("show");renderAll();try{navigator.storage&&navigator.storage.persist&&navigator.storage.persist()}catch(e){}};
 renderChips();renderAll();
 if(!S.profile)$("#gate").classList.add("show");
-if("serviceWorker"in navigator&&location.protocol.startsWith("http"))navigator.serviceWorker.register("sw.js").catch(()=>{});
+if ("serviceWorker" in navigator) {
+  let refreshing = false;
+  navigator.serviceWorker.addEventListener("controllerchange", () => {
+    if (!refreshing) {
+      refreshing = true;
+      window.location.reload();
+    }
+  });
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("sw.js").then((reg) => {
+      reg.update().catch(() => {});
+    }).catch(() => {});
+  });
+}
 
 // Harmonize BUILTIN machines with machines.json
 async function loadAndHarmonizeMachines() {
@@ -2446,6 +2459,7 @@ function appendMessage(role, text, parts, partsPending = false, jobId = null) {
   const msgDiv = document.createElement('div');
   msgDiv.className = `message ${role}`;
   msgDiv.dataset.fullText = text || '';
+  if (jobId) msgDiv.dataset.jobId = jobId;
   
   const safe = escapeHtml(text || '');
   let formatted = safe
@@ -2532,7 +2546,7 @@ function appendMessage(role, text, parts, partsPending = false, jobId = null) {
 async function pollForFinalParts(jobId, startAttempt, maxAttempts = 24, inviteCode) {
   try {
     for (let attempt = startAttempt; attempt <= maxAttempts; attempt++) {
-      const pollRes = await fetchWithGatewayRetry(`/v1/job/${encodeURIComponent(jobId)}/result?wait=25`, {
+      const pollRes = await fetchWithGatewayRetry(`/v1/job/${encodeURIComponent(jobId)}/result?wait=25&target=completed`, {
         method: 'GET',
         headers: {
           'X-Invite-Code': inviteCode
@@ -2547,25 +2561,36 @@ async function pollForFinalParts(jobId, startAttempt, maxAttempts = 24, inviteCo
           if (finalSolution) {
             window.latestDiagSolution = finalSolution;
           }
+          let targetMsg = null;
           const loader = document.getElementById(`parts-loader-${jobId}`);
           if (loader) {
-            const msgContainer = loader.closest('.message') || loader.parentElement;
-            if (msgContainer && finalSolution) {
-              msgContainer.dataset.fullText = finalSolution;
+            targetMsg = loader.closest('.message') || loader.parentElement;
+          }
+          if (!targetMsg) {
+            targetMsg = document.querySelector(`[data-job-id="${jobId}"]`) ||
+                        document.querySelector('.message.assistant:last-of-type');
+          }
+          if (targetMsg && finalSolution) {
+            targetMsg.dataset.fullText = finalSolution;
+          }
+          if (parts.length > 0) {
+            const grid = buildPartsGrid(parts);
+            if (loader) {
+              loader.replaceWith(grid);
+            } else if (targetMsg) {
+              const oldLoader = targetMsg.querySelector('.parts-inline-loader');
+              if (oldLoader) oldLoader.remove();
+              targetMsg.appendChild(grid);
             }
-            if (parts.length > 0) {
-              const grid = buildPartsGrid(parts);
-              if (grid) {
-                loader.replaceWith(grid);
-              } else {
-                loader.remove();
-              }
-            } else {
-              loader.remove();
-            }
+          } else if (loader) {
+            loader.remove();
           }
           return;
         }
+
+        // Backoff delay of 1000ms if parts_pending === true to prevent busy-looping
+        await new Promise(r => setTimeout(r, 1000));
+        continue;
       } else if (pollRes.status !== 202) {
         break;
       }
