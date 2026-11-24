@@ -465,6 +465,8 @@ dl.kv{grid-template-columns:110px 1fr}
     white-space: nowrap;
 }
 .stock-tag.in { background: #EBF1DE; color: #4F6228; border: 1px solid #C4D9A0; }
+.stock-tag.zero { background: #FDE8E8; color: #9B1C1C; border: 1px solid #F8B4B4; }
+.stock-tag.catalog { background: #F3F4F6; color: #4B5563; border: 1px solid #E5E7EB; }
 .stock-tag.out { background: #FDE9D9; color: var(--red); border: 1px solid #F8CBB0; }
 .stock-tag.none { background: var(--alt); color: var(--muted); border: 1px solid var(--line); }
 
@@ -2373,15 +2375,28 @@ function buildPartsGrid(parts) {
     const location = (p.location || p.bin || '').trim();
     const warehouse = (p.warehouse || p.business_unit || '').trim();
     const role = (p.role_ar || p.role || '').trim();
-    const stockStatus = p.stock_status || (qty > 0 ? 'IN_STOCK' : 'OUT_OF_STOCK');
+    const stockStatus = (p.stock_status || '').trim();
 
-    let stockClass = (qty > 0 || stockStatus === 'IN_STOCK') ? 'in' : 'out';
-    let stockLabel = stockClass === 'in' ? tr('متوفر') : tr('غير متوفر');
+    const isUnlisted = !location || location === 'غير مدرج' || location === 'غير مدرج بكود المخزن';
+
+    let stockClass = 'catalog';
+    let stockLabel = '⚪ ' + tr('كتالوج فقط');
+
+    if (qty > 0 || stockStatus === 'IN_STOCK') {
+      stockClass = 'in';
+      stockLabel = '🟢 ' + tr('متوفر بالمخزن') + ` (${qty})`;
+    } else if (stockStatus === 'ZERO_STOCK' || (!isUnlisted && qty === 0)) {
+      stockClass = 'zero';
+      stockLabel = '🔴 ' + tr('نافذ من المخزن') + ' (0)';
+    } else {
+      stockClass = 'catalog';
+      stockLabel = '⚪ ' + tr('كتالوج فقط');
+    }
 
     let locHtml = '';
-    if (location && location !== 'غير مدرج') {
+    if (!isUnlisted) {
       const whText = warehouse ? ` <span style="color:var(--muted)">[${escapeHtml(warehouse)}]</span>` : '';
-      locHtml = `<span class="part-meta-item">${tr('📍 البن / الرف:')} <b style="color:var(--coral); font-family:monospace;">${escapeHtml(location)}</b>${whText}</span>`;
+      locHtml = `<span class="part-meta-item">${tr('📍 الرف / البن:')} <b style="color:var(--coral); font-family:monospace;">${escapeHtml(location)}</b>${whText}</span>`;
     } else {
       locHtml = `<span class="part-meta-item" style="color:var(--muted)">${tr('📍 المخزن: غير مسجل في الجرد')}</span>`;
     }
