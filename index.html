@@ -2407,6 +2407,7 @@ function buildPartsGrid(parts) {
 function appendMessage(role, text, parts, partsPending = false, jobId = null) {
   const msgDiv = document.createElement('div');
   msgDiv.className = `message ${role}`;
+  msgDiv.dataset.fullText = text || '';
   
   const safe = escapeHtml(text || '');
   let formatted = safe
@@ -2431,7 +2432,8 @@ function appendMessage(role, text, parts, partsPending = false, jobId = null) {
     copyBtn.style.fontSize = '12px';
     copyBtn.innerHTML = tr('📋 نسخ البيانات الفنية');
     copyBtn.onclick = () => {
-      navigator.clipboard.writeText(text).then(() => {
+      const textToCopy = msgDiv.dataset.fullText || text;
+      navigator.clipboard.writeText(textToCopy).then(() => {
         copyBtn.textContent = tr('✅ تم النسخ بنجاح!');
         setTimeout(() => { copyBtn.innerHTML = tr('📋 نسخ البيانات الفنية'); }, 2500);
       }).catch(() => {
@@ -2487,10 +2489,18 @@ async function pollForFinalParts(jobId, startAttempt, maxAttempts = 24, inviteCo
       if (pollRes.status === 200) {
         const resData = await pollRes.json();
         if (resData.parts_pending !== true) {
+          const finalSolution = resData.solution || '';
           const parts = resData.suggested_parts || [];
           window.latestDiagParts = parts;
+          if (finalSolution) {
+            window.latestDiagSolution = finalSolution;
+          }
           const loader = document.getElementById(`parts-loader-${jobId}`);
           if (loader) {
+            const msgContainer = loader.closest('.message') || loader.parentElement;
+            if (msgContainer && finalSolution) {
+              msgContainer.dataset.fullText = finalSolution;
+            }
             if (parts.length > 0) {
               const grid = buildPartsGrid(parts);
               if (grid) {
