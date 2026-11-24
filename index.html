@@ -2362,14 +2362,16 @@ function buildPartsGrid(parts) {
   const tr = (window.I18N && typeof window.I18N.tr === 'function') ? window.I18N.tr : (s => s);
   const partsDiv = document.createElement('div');
   partsDiv.className = 'parts-grid';
-  partsDiv.innerHTML = '<div style="font-size: 12px; font-weight: bold; color: var(--navy); margin-top: 8px; display: flex; align-items: center; gap: 6px;"><span>⚙️</span><span>' + tr('قطع الغيار والمكونات المرتبطة بالعطل') + ' (' + parts.length + '):</span></div>';
+  partsDiv.innerHTML = '<div style="font-size: 13px; font-weight: bold; color: var(--navy); margin-top: 12px; margin-bottom: 6px; display: flex; align-items: center; gap: 6px;"><span>⚙️</span><span>' + tr('قطع الغيار والمكونات المرتبطة بالعطل') + ' (' + parts.length + '):</span></div>';
 
   parts.forEach(p => {
     const card = document.createElement('div');
     card.className = 'part-card';
 
     const partName = p.part_name || p.name || p.name_en || tr('صنف غير مسمى');
-    const partCode = p.part_code || p.code || p.code_hint || (p.item_number || tr('بدون كود'));
+    const catCode = (p.catalog_code && p.catalog_code !== 'بدون كود' && p.catalog_code !== 'غير محدد بالكتالوج') ? p.catalog_code : (p.code_hint || '');
+    const jdeCode = (p.jde_code && p.jde_code !== 'بدون كود') ? p.jde_code : (p.part_code || '');
+
     const rawQty = (p.qty_on_hand !== undefined && p.qty_on_hand !== null) ? Number(p.qty_on_hand) : (p.qty !== undefined ? Number(p.qty) : 0);
     const qty = isNaN(rawQty) ? 0 : rawQty;
     const location = (p.location || p.bin || '').trim();
@@ -2393,6 +2395,27 @@ function buildPartsGrid(parts) {
       stockLabel = '⚪ ' + tr('كتالوج فقط');
     }
 
+    // Dual Code HTML
+    let codesHtml = '';
+    if (catCode && jdeCode && catCode !== jdeCode) {
+      codesHtml = `
+        <div class="part-code-row" style="display:flex;gap:12px;flex-wrap:wrap;font-size:12px;margin-bottom:4px;">
+          <span>📖 ${tr('كود الكتالوج:')} <b style="font-family:monospace;letter-spacing:0.5px;">${escapeHtml(catCode)}</b></span>
+          <span>🔢 ${tr('كود المخزن JDE:')} <b style="font-family:monospace;letter-spacing:0.5px;color:var(--navy);">${escapeHtml(jdeCode)}</b></span>
+        </div>`;
+    } else if (jdeCode) {
+      codesHtml = `
+        <div class="part-code-row" style="font-size:12px;margin-bottom:4px;">
+          <span>🔢 ${tr('كود المخزن JDE:')} <b style="font-family:monospace;letter-spacing:0.5px;color:var(--navy);">${escapeHtml(jdeCode)}</b></span>
+        </div>`;
+    } else {
+      codesHtml = `
+        <div class="part-code-row" style="font-size:12px;margin-bottom:4px;">
+          <span>📖 ${tr('كود الكتالوج:')} <b style="font-family:monospace;letter-spacing:0.5px;">${escapeHtml(catCode || tr('بدون كود'))}</b></span>
+          <span style="color:var(--muted)">[${tr('غير مسجل بالجرد')}]</span>
+        </div>`;
+    }
+
     let locHtml = '';
     if (!isUnlisted) {
       const whText = warehouse ? ` <span style="color:var(--muted)">[${escapeHtml(warehouse)}]</span>` : '';
@@ -2401,15 +2424,15 @@ function buildPartsGrid(parts) {
       locHtml = `<span class="part-meta-item" style="color:var(--muted)">${tr('📍 المخزن: غير مسجل في الجرد')}</span>`;
     }
 
-    const roleHtml = role ? `<div class="part-role">💡 <b>${tr('💡 الدور الفني:')}</b> ${escapeHtml(role)}</div>` : '';
+    const roleHtml = role ? `<div class="part-role" style="margin-top:4px;font-size:12px;color:var(--text);">💡 <b>${tr('💡 الدور الفني:')}</b> ${escapeHtml(role)}</div>` : '';
 
     card.innerHTML = `
-      <div class="part-header">
-        <div class="part-title">${escapeHtml(partName)}</div>
+      <div class="part-header" style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:6px;">
+        <div class="part-title" style="font-weight:600;font-size:13px;line-height:1.4;">${escapeHtml(partName)}</div>
         <span class="stock-tag ${stockClass}">${stockLabel}</span>
       </div>
-      <div class="part-meta">
-        <span class="part-meta-item">${tr('🔢 رقم القطعة (Part No):')} <b style="font-family:monospace;letter-spacing:0.5px;">${escapeHtml(partCode)}</b></span>
+      <div class="part-meta" style="font-size:12px;">
+        ${codesHtml}
         ${locHtml}
       </div>
       ${roleHtml}
@@ -2447,7 +2470,21 @@ function appendMessage(role, text, parts, partsPending = false, jobId = null) {
     copyBtn.style.fontSize = '12px';
     copyBtn.innerHTML = tr('📋 نسخ البيانات الفنية');
     copyBtn.onclick = () => {
-      const textToCopy = msgDiv.dataset.fullText || text;
+      let fullReport = (msgDiv.dataset.fullText || text);
+      if (window.latestDiagParts && window.latestDiagParts.length > 0) {
+        fullReport += "\n\n### ⚙️ قطع الغيار والمكونات المرتبطة:";
+        window.latestDiagParts.forEach(p => {
+          const pName = p.part_name || p.name || 'قطعة';
+          const cat = p.catalog_code || p.code_hint || '';
+          const jde = p.jde_code || p.part_code || '';
+          const codeStr = (cat && jde && cat !== jde) ? `كتالوج: ${cat} | مخزن JDE: ${jde}` : (jde || cat || 'بدون كود');
+          const qty = p.qty_on_hand !== undefined ? p.qty_on_hand : (p.qty || 0);
+          const loc = (p.location && p.location !== 'غير مدرج' && p.location !== 'غير مدرج بكود المخزن') ? p.location : 'غير مدرج بالجرد';
+          const st = (qty > 0 || p.stock_status === 'IN_STOCK') ? 'متوفر' : 'نافذ';
+          fullReport += `\n- **${pName}** (${codeStr}) | الرصيد: **${qty}** (${st}) | الرف: **${loc}**`;
+        });
+      }
+      const textToCopy = fullReport;
       navigator.clipboard.writeText(textToCopy).then(() => {
         copyBtn.textContent = tr('✅ تم النسخ بنجاح!');
         setTimeout(() => { copyBtn.innerHTML = tr('📋 نسخ البيانات الفنية'); }, 2500);
@@ -2597,9 +2634,11 @@ function transferDiagnosticToWorkLog(btn) {
   if (fParts && window.latestDiagParts && window.latestDiagParts.length > 0) {
     fParts.value = window.latestDiagParts.map(p => {
       const name = p.part_name || p.name || 'قطعة';
-      const code = p.part_code || p.code || '';
-      const loc = p.location ? ` [بن: ${p.location}]` : '';
-      return `${name} (${code})${loc}`;
+      const cat = p.catalog_code || p.code_hint || '';
+      const jde = p.jde_code || p.part_code || '';
+      const codeStr = (cat && jde && cat !== jde) ? `كتالوج: ${cat} / مخزن: ${jde}` : (jde || cat || 'بدون كود');
+      const loc = (p.location && p.location !== 'غير مدرج' && p.location !== 'غير مدرج بكود المخزن') ? ` [بن: ${p.location}]` : '';
+      return `${name} (${codeStr})${loc}`;
     }).join("، ");
   }
 

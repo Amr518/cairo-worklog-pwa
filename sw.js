@@ -1,4 +1,4 @@
-const CACHE_NAME = "wl-unified-v3";
+const CACHE_NAME = "wl-unified-v4";
 
 const CORE_ASSETS = [
   "./",
