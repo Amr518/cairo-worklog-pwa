@@ -109,6 +109,12 @@
 
     updateDeptFilter();
     updateMachineFilter();
+    if (typeof initCustomSelectPickers === "function") initCustomSelectPickers();
+    if (typeof updateCustomSelectTrigger === "function") {
+      updateCustomSelectTrigger(siteSel);
+      updateCustomSelectTrigger(deptSel);
+      updateCustomSelectTrigger(machSel);
+    }
   }
 
   function updateDeptFilter() {
@@ -135,6 +141,8 @@
     deptSel.value = "ALL";
     STATE.dept = "ALL";
     updateMachineFilter();
+    if (typeof initCustomSelectPickers === "function") initCustomSelectPickers();
+    if (typeof updateCustomSelectTrigger === "function") updateCustomSelectTrigger(deptSel);
   }
 
   function updateMachineFilter() {
@@ -161,6 +169,8 @@
     machSel.innerHTML = html;
     machSel.value = "ALL";
     STATE.machine = "ALL";
+    if (typeof initCustomSelectPickers === "function") initCustomSelectPickers();
+    if (typeof updateCustomSelectTrigger === "function") updateCustomSelectTrigger(machSel);
   }
 
   function applyFilters() {

@@ -974,7 +974,7 @@ nav{grid-template-columns:repeat(7,1fr)}
     <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
       <div>
         <label for="jd-filter-site" style="font-size:11px; margin:0 0 2px;">Site</label>
-        <select id="jd-filter-site" style="font-size:13px; padding:7px 10px;">
+        <select id="jd-filter-site" data-sheet-title="🏢 Select Site (JD Edwards)" style="font-size:13px; padding:7px 10px;">
           <option value="ALL">All Sites</option>
           <option value="S01">Acacia (SPW01)</option>
           <option value="S02">Palmier (SPW02)</option>
@@ -983,14 +983,14 @@ nav{grid-template-columns:repeat(7,1fr)}
       </div>
       <div>
         <label for="jd-filter-dept" style="font-size:11px; margin:0 0 2px;">Department</label>
-        <select id="jd-filter-dept" style="font-size:13px; padding:7px 10px;">
+        <select id="jd-filter-dept" data-sheet-title="📍 Select Department (JD Edwards)" style="font-size:13px; padding:7px 10px;">
           <option value="ALL">All Departments</option>
         </select>
       </div>
     </div>
     <div style="margin-top:6px;">
       <label for="jd-filter-machine" style="font-size:11px; margin:0 0 2px;">Machine (English)</label>
-      <select id="jd-filter-machine" style="font-size:13px; padding:7px 10px;">
+      <select id="jd-filter-machine" data-sheet-title="⚙️ Select Machine (JD Edwards)" style="font-size:13px; padding:7px 10px;">
         <option value="ALL">All Machines</option>
       </select>
     </div>
@@ -1055,7 +1055,10 @@ nav{grid-template-columns:repeat(7,1fr)}
   <div class="sheet-container">
     <div class="sheet-handle"></div>
     <div class="sheet-header">
-      <h3 class="sheet-title" id="sheet-title">اختر</h3>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <img src="logo.png" alt="Servier" style="height:20px;width:auto;">
+        <h3 class="sheet-title" id="sheet-title">اختر</h3>
+      </div>
       <button type="button" class="sheet-close" id="sheet-close-btn">✕</button>
     </div>
     <div class="sheet-search hidden" id="sheet-search-box">
@@ -2105,17 +2108,39 @@ function openSelectSheet(selectEl) {
   return openCustomPickerForSelect(selectEl);
 }
 
+function updateCustomSelectTrigger(sel) {
+  if (typeof sel === 'string') sel = document.querySelector(sel);
+  if (!sel) return;
+  const wrap = sel.closest('.custom-select-wrap');
+  if (wrap) {
+    const trigger = wrap.querySelector('.custom-select-trigger');
+    if (trigger) {
+      const label = resolveSelectTitle(sel);
+      if (label) trigger.setAttribute('aria-label', label);
+      const opt = sel.options && sel.selectedIndex >= 0 ? sel.options[sel.selectedIndex] : null;
+      if (opt) {
+        trigger.setAttribute('title', opt.text || opt.label || '');
+      }
+    }
+  }
+}
+window.updateCustomSelectTrigger = updateCustomSelectTrigger;
+
 function initCustomSelectPickers() {
   const targetSelectors = [
     '#fMachine', '#fCat', '#fStatus', '#logCat', 
     '#logMonth', '#period', '#sRole', '#mBld', 
-    '#gRole', '#lang'
+    '#gRole', '#lang',
+    '#jd-filter-site', '#jd-filter-dept', '#jd-filter-machine'
   ];
 
   targetSelectors.forEach(selector => {
     const sel = document.querySelector(selector);
     if (!sel) return;
-    if (sel.dataset.customPickerAttached || (sel.parentElement && sel.parentElement.classList.contains('custom-select-wrap'))) return;
+    if (sel.dataset.customPickerAttached || (sel.parentElement && sel.parentElement.classList.contains('custom-select-wrap'))) {
+      if (typeof updateCustomSelectTrigger === 'function') updateCustomSelectTrigger(sel);
+      return;
+    }
     sel.dataset.customPickerAttached = 'true';
 
     const wrap = document.createElement('div');
@@ -2149,8 +2174,11 @@ function initCustomSelectPickers() {
         openHandler(e);
       }
     });
+    sel.addEventListener('click', openHandler);
+    if (typeof updateCustomSelectTrigger === 'function') updateCustomSelectTrigger(sel);
   });
 }
+window.initCustomSelectPickers = initCustomSelectPickers;
 
 function openPicker(type) {
   const tr = (window.I18N && typeof window.I18N.tr === 'function') ? window.I18N.tr : (s => s);
