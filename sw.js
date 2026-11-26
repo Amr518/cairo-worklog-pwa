@@ -1,10 +1,12 @@
-const CACHE_NAME = "wl-unified-v5";
+const CACHE_NAME = "wl-unified-v6";
 
 const CORE_ASSETS = [
   "./",
   "index.html",
   "manifest.webmanifest",
   "machines.json",
+  "jd_cmms_data.json",
+  "jd_cmms.js",
   "icon-180.png",
   "icon-192.png",
   "icon-512.png",

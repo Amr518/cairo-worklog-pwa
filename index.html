@@ -644,10 +644,10 @@ dl.kv{grid-template-columns:110px 1fr}
     font-weight: 700;
     font-size: 15px;
 }
-nav{grid-template-columns:repeat(6,1fr)}
+nav{grid-template-columns:repeat(7,1fr)}
 #nav {
   z-index: 100 !important;
-  grid-template-columns: repeat(6, 1fr) !important;
+  grid-template-columns: repeat(7, 1fr) !important;
 }
 .hidden, .sheet-overlay.hidden, .modal-overlay.hidden, .modal.hidden {
   display: none !important;
@@ -922,6 +922,85 @@ nav{grid-template-columns:repeat(6,1fr)}
       <span>تم اغلاق الشات</span>
     </div>
   </div>
+<!-- ============ JD CMMS WORK ORDERS TAB (Decision D-032 / INV-3) ============ -->
+<section class="tab" id="t-jd">
+  <!-- Servier Egypt Header Card -->
+  <div class="card" style="border-inline-start: 5px solid var(--navy); background: linear-gradient(135deg, #ffffff 0%, #f4f5fa 100%);">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+      <h3 style="margin:0; color:var(--navy); font-size:16px; font-weight:700;">JD Edwards CMMS Work Orders</h3>
+      <span class="chip" id="jd-sync-timestamp" style="background:var(--lblue); color:var(--navy); font-size:11px;">Offline Cached</span>
+    </div>
+    <p style="font-size:12px; color:var(--muted); margin:0 0 10px;">
+      Official maintenance work orders database for Servier Egypt plants. All machines and equipment technical terminology strictly in English.
+    </p>
+
+    <!-- KPI Metric Pills -->
+    <div style="display:grid; grid-template-columns:repeat(4, 1fr); gap:6px; margin-top:8px;">
+      <div style="background:#fff; border:1px solid var(--line); border-radius:8px; padding:6px 8px; text-align:center;">
+        <span style="font-size:10px; color:var(--muted); display:block;">Total</span>
+        <b id="jd-kpi-total" style="font-size:15px; color:var(--navy);">0</b>
+      </div>
+      <div style="background:#fff; border:1px solid #d3def2; border-radius:8px; padding:6px 8px; text-align:center;">
+        <span style="font-size:10px; color:var(--navy); display:block;">Open PM</span>
+        <b id="jd-kpi-open-pm" style="font-size:15px; color:var(--navy);">0</b>
+      </div>
+      <div style="background:#fff; border:1px solid #fde1db; border-radius:8px; padding:6px 8px; text-align:center;">
+        <span style="font-size:10px; color:var(--coral); display:block;">Open CM</span>
+        <b id="jd-kpi-open-cm" style="font-size:15px; color:var(--coral);">0</b>
+      </div>
+      <div style="background:#fff; border:1px solid #f9d8d6; border-radius:8px; padding:6px 8px; text-align:center;">
+        <span style="font-size:10px; color:var(--red); display:block;">Overdue</span>
+        <b id="jd-kpi-overdue" style="font-size:15px; color:var(--red);">0</b>
+      </div>
+    </div>
+  </div>
+
+  <!-- Search & Filter Controls -->
+  <div class="card" style="padding:10px 12px; margin-bottom:10px;">
+    <input type="text" id="jd-search-input" placeholder="🔍 Search WO#, Asset#, Machine, Description..." style="padding:9px 12px; font-size:14px; margin-bottom:8px;">
+    
+    <!-- Status Filter Chips -->
+    <div class="chips" id="jd-status-filters" style="margin-bottom:8px;">
+      <button class="on" data-status="ALL">All Status</button>
+      <button data-status="OPEN_PM">Open PM</button>
+      <button data-status="OPEN_CM">Open CM</button>
+      <button data-status="OVERDUE">Overdue</button>
+      <button data-status="CLOSED">Closed</button>
+    </div>
+
+    <!-- Hierarchy Drilldown Selectors (All English) -->
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+      <div>
+        <label for="jd-filter-site" style="font-size:11px; margin:0 0 2px;">Site</label>
+        <select id="jd-filter-site" style="font-size:13px; padding:7px 10px;">
+          <option value="ALL">All Sites</option>
+          <option value="S01">Acacia (SPW01)</option>
+          <option value="S02">Palmier (SPW02)</option>
+          <option value="GEN">Utilities & Shared</option>
+        </select>
+      </div>
+      <div>
+        <label for="jd-filter-dept" style="font-size:11px; margin:0 0 2px;">Department</label>
+        <select id="jd-filter-dept" style="font-size:13px; padding:7px 10px;">
+          <option value="ALL">All Departments</option>
+        </select>
+      </div>
+    </div>
+    <div style="margin-top:6px;">
+      <label for="jd-filter-machine" style="font-size:11px; margin:0 0 2px;">Machine (English)</label>
+      <select id="jd-filter-machine" style="font-size:13px; padding:7px 10px;">
+        <option value="ALL">All Machines</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- Work Orders List Container -->
+  <div id="jd-wo-list">
+    <div class="card center muted">Loading JD Edwards Work Orders...</div>
+  </div>
+
+  <!-- Load More Button (Pagination) -->
+  <button id="jd-btn-load-more" class="btn ghost block" style="display:none; margin:10px 0;">Load More Work Orders</button>
 </section>
 
 </main>
@@ -931,8 +1010,9 @@ nav{grid-template-columns:repeat(6,1fr)}
   <button data-t="log"><svg viewBox="0 0 24 24"><path d="M4 5h16v2H4zm0 6h16v2H4zm0 6h10v2H4z"/></svg>سجلي</button>
   <button data-t="an"><svg viewBox="0 0 24 24"><path d="M3 4h18v2H3zm2 4h14v10H5zm2 2v6h10v-6zM9 20h6v2H9z"/></svg>تحليل</button>
   <button data-t="sum"><svg viewBox="0 0 24 24"><path d="M4 20V10h4v10zm6 0V4h4v16zm6 0v-7h4v7z"/></svg>ملخص</button>
-  <button data-t="set"><svg viewBox="0 0 24 24"><path d="M19.4 13a7.9 7.9 0 0 0 0-2l2.1-1.6-2-3.5-2.5 1a7.6 7.6 0 0 0-1.7-1l-.4-2.7h-4l-.4 2.7a7.6 7.6 0 0 0-1.7 1l-2.5-1-2 3.5L4.6 11a7.9 7.9 0 0 0 0 2l-2.1 1.6 2 3.5 2.5-1a7.6 7.6 0 0 0 1.7 1l.4 2.7h4l.4-2.7a7.6 7.6 0 0 0 1.7-1l2.5 1 2-3.5zM12 15.5A3.5 3.5 0 1 1 12 8a3.5 3.5 0 0 1 0 7.5z"/></svg>إعدادات</button>
+  <button data-t="jd" id="btn-tab-jd" aria-label="JD CMMS Work Orders"><svg viewBox="0 0 24 24"><path d="M19 3h-4.18C14.4 1.84 13.3 1 12 1c-1.3 0-2.4.84-2.82 2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 0c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zm2 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg>أوامر الشغل</button>
   <button data-t="diag"><svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg>تشخيص</button>
+  <button data-t="set"><svg viewBox="0 0 24 24"><path d="M19.4 13a7.9 7.9 0 0 0 0-2l2.1-1.6-2-3.5-2.5 1a7.6 7.6 0 0 0-1.7-1l-.4-2.7h-4l-.4 2.7a7.6 7.6 0 0 0-1.7 1l-2.5-1-2 3.5L4.6 11a7.9 7.9 0 0 0 0 2l-2.1 1.6 2 3.5 2.5-1a7.6 7.6 0 0 0 1.7 1l.4 2.7h4l.4-2.7a7.6 7.6 0 0 0 1.7-1l2.5 1 2-3.5zM12 15.5A3.5 3.5 0 1 1 12 8a3.5 3.5 0 0 1 0 7.5z"/></svg>إعدادات</button>
 </nav>
 
 
@@ -1321,8 +1401,76 @@ function switchTab(t){
   if(t==="set")renderSettings();
   if(t==="an"&&window.renderAnalyses)renderAnalyses();
   if(t==="diag"&&typeof initDiagnosticCore==="function")initDiagnosticCore();
+  if(t==="jd"){
+    if(typeof initJdCmmsTab==="function")initJdCmmsTab();
+    else if(typeof loadJdCmmsData==="function")loadJdCmmsData();
+  }
 }
 $$("#nav button").forEach(b=>b.onclick=()=>switchTab(b.dataset.t));
+
+/* ---------------- 1-Click WorkLog Bridge Engine (Decision D-032 / INV-4) ---------------- */
+function bridgeWorkOrderToLog(woNumber) {
+  const numStr = String(woNumber);
+  const wo = (window.JD_CMMS_DATA && window.JD_CMMS_DATA.work_orders)
+    ? window.JD_CMMS_DATA.work_orders.find(w => String(w.wo) === numStr)
+    : null;
+
+  const formCard = document.getElementById('formCard');
+  if (formCard) formCard.style.display = 'block';
+
+  const fTitle = document.getElementById('fTitle');
+  const txt = document.getElementById('txt');
+  const fDesc = document.getElementById('fDesc');
+  const fCat = document.getElementById('fCat');
+  const fMachine = document.getElementById('fMachine');
+
+  const titleVal = wo ? `[WO#${wo.wo}] ${wo.desc || ''}` : `[WO#${numStr}]`;
+  if (fTitle) fTitle.value = titleVal;
+  if (txt) txt.value = titleVal;
+
+  if (wo) {
+    if (fDesc) {
+      fDesc.value = `JD Edwards CMMS WO #${wo.wo}\nMachine: ${wo.label || ''} (Asset ${wo.asset || ''})\nSite: ${wo.siteName || wo.site || ''} | Dept: ${wo.deptName || wo.dept || ''}\nPlanned: ${wo.plan || 'N/A'}\nType: ${wo.typeLabel || wo.type || ''}`;
+    }
+    if (fCat) {
+      if (wo.type === '1') {
+        fCat.value = 'Breakdown Fixed';
+      } else {
+        fCat.value = 'Achievement';
+      }
+    }
+    if (fMachine && wo.label) {
+      const opts = Array.from(fMachine.options);
+      let found = false;
+      for (const opt of opts) {
+        if (opt.value && (wo.label.toLowerCase().includes(opt.value.toLowerCase()) || (wo.asset && opt.value.toLowerCase().includes(wo.asset)))) {
+          fMachine.value = opt.value;
+          found = true;
+          break;
+        }
+      }
+      if (!found && wo.asset) {
+        for (const opt of opts) {
+          if (opt.value && opt.value.includes(wo.asset)) {
+            fMachine.value = opt.value;
+            break;
+          }
+        }
+      }
+    }
+  }
+
+  if (typeof switchTab === 'function') {
+    switchTab('add');
+  }
+  if (formCard) formCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  if (typeof toast === 'function') {
+    toast("✅ تم ترحيل بيانات أمر الشغل #" + numStr + " إلى نموذج التسجيل");
+  }
+}
+window.bridgeWorkOrderToLog = bridgeWorkOrderToLog;
+// Referenced bridge button class: btn-bridge-wo
+
 const isEN=()=>!!(window.I18N&&I18N.isEN()),tr=s=>window.I18N?I18N.tr(s):s;
 const catAr=v=>{const c=CATS.find(c=>c[0]===v);return c?(isEN()?c[0]:c[1]):v};
 const fmt=n=>Math.round(+n||0).toLocaleString("en-US");
@@ -3191,5 +3339,6 @@ document.addEventListener('DOMContentLoaded', () => {
 <script src="suggest.js"></script>
 <script src="i18n_fr.js"></script>
 <script src="i18n.js"></script>
+<script src="jd_cmms.js"></script>
 </body>
 </html>
