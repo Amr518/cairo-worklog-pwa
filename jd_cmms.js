@@ -41,6 +41,80 @@
     return { bg: "#f4f5fa", fg: "#6b6f86" };
   }
 
+  function syncFieldPartsFromWorkLog(workOrders) {
+    if (!workOrders || !Array.isArray(workOrders)) return;
+
+    let entries = [];
+    try {
+      if (window.S && Array.isArray(window.S.entries)) {
+        entries = window.S.entries;
+      } else {
+        const raw = localStorage.getItem("wl.data");
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          entries = parsed.entries || [];
+        }
+      }
+    } catch (e) {
+      console.warn("Failed to load local worklog entries for parts sync:", e);
+    }
+
+    if (!entries || entries.length === 0) return;
+
+    const woMap = new Map();
+    workOrders.forEach(w => woMap.set(String(w.wo), w));
+
+    const woRegex = /(?:(?:WO|أمر\s*شغل)\s*#?\s*|#)(\d{4,6})\b|\b(4\d{4})\b/i;
+
+    entries.forEach(rec => {
+      const partsText = (rec.parts || "").trim();
+      if (!partsText) return;
+
+      const haystack = [rec.evidence, rec.title, rec.desc].filter(Boolean).join(" ");
+      const m = haystack.match(woRegex);
+      if (!m) return;
+      const matchedWo = m[1] || m[2];
+      if (!matchedWo || !woMap.has(matchedWo)) return;
+
+      const wo = woMap.get(matchedWo);
+      if (!wo.parts_issued) wo.parts_issued = [];
+
+      const items = partsText.split(/[,;\n]+/).map(s => s.trim()).filter(Boolean);
+      items.forEach(rawItem => {
+        let qty = 1;
+        const qtyMatch = rawItem.match(/\b(\d+)\s*(?:pcs|قطعة|set)?\b/i);
+        if (qtyMatch) {
+          qty = parseInt(qtyMatch[1], 10) || 1;
+        }
+
+        const codeMatch = rawItem.match(/\b([A-Z0-9]{5,12})\b/i);
+        const code = codeMatch ? codeMatch[1].toUpperCase() : "FIELD-PART";
+        let cleanName = rawItem;
+        if (codeMatch) {
+          cleanName = cleanName.replace(codeMatch[0], "").trim();
+        }
+        if (qtyMatch) {
+          cleanName = cleanName.replace(qtyMatch[0], "").trim();
+        }
+        cleanName = cleanName.replace(/^[-:() ]+|[-:() ]+$/g, "").trim();
+        if (!cleanName) cleanName = rawItem;
+
+        const alreadyExists = wo.parts_issued.some(p => p.code === code && p.name === cleanName);
+        if (!alreadyExists) {
+          wo.parts_issued.push({
+            code: code,
+            name: cleanName,
+            qty: qty,
+            unit: "PCS",
+            date: rec.date || new Date().toISOString().slice(0, 10),
+            source: "WorkLog (Field)",
+          });
+          wo.has_parts = true;
+        }
+      });
+    });
+  }
+
   async function loadJdCmmsData() {
     if (STATE.data) return STATE.data;
     try {
@@ -49,6 +123,7 @@
       const data = await res.json();
       STATE.data = data;
       window.JD_CMMS_DATA = data;
+      syncFieldPartsFromWorkLog(data.work_orders);
       updateKpis(data.stats);
       populateHierarchyFilters(data);
       applyFilters();
@@ -175,6 +250,7 @@
 
   function applyFilters() {
     if (!STATE.data || !STATE.data.work_orders) return;
+    syncFieldPartsFromWorkLog(STATE.data.work_orders);
     const all = STATE.data.work_orders;
     const q = STATE.q.trim().toLowerCase();
 
@@ -185,6 +261,9 @@
         if (STATE.status === "OPEN_CM" && (wo.is_closed === 1 || wo.type !== "1")) return false;
         if (STATE.status === "OVERDUE" && (wo.is_closed === 1 || wo.is_overdue !== 1)) return false;
         if (STATE.status === "CLOSED" && wo.is_closed !== 1) return false;
+        if (STATE.status === "WITH_PARTS") {
+          if (!wo.has_parts || !wo.parts_issued || wo.parts_issued.length === 0) return false;
+        }
       }
 
       // Hierarchy filters
@@ -247,6 +326,47 @@
       const safePlan = escapeHtml(wo.plan || "Not Specified");
       const safeAct = escapeHtml(wo.act || (wo.is_closed ? "Closed" : "Open"));
 
+      const partsCount = (wo.parts_issued && Array.isArray(wo.parts_issued)) ? wo.parts_issued.length : 0;
+      const partsBadgeHtml = (wo.has_parts && partsCount > 0)
+        ? `<span class="chip jd-parts-badge" style="background:var(--lblue); color:var(--navy); font-weight:700; border:1px solid #b8cbef;">📦 Parts Issued (${partsCount})</span>`
+        : `<span class="chip jd-no-parts-badge" style="background:var(--alt); color:var(--muted); font-weight:500;">📦 No Parts</span>`;
+
+      const partsBoxHtml = (wo.has_parts && partsCount > 0) ? `
+        <div class="jd-parts-box" style="margin:8px 0; background:#ffffff; border:1px solid var(--line); border-radius:10px; overflow:hidden;">
+          <div style="background:var(--alt); padding:6px 10px; display:flex; justify-content:space-between; align-items:center; font-size:12px; font-weight:700; color:var(--navy); border-bottom:1px solid var(--line);">
+            <span style="display:flex; align-items:center; gap:5px;">
+              <span>📦</span> Issued Spare Parts (${partsCount})
+            </span>
+            <span style="font-size:10px; font-weight:600; color:var(--coral); text-transform:uppercase; letter-spacing:0.5px;">Audited &amp; Tracked</span>
+          </div>
+          <div style="padding:4px 6px; overflow-x:auto;">
+            <table style="width:100%; border-collapse:collapse; font-size:11px; text-align:left;">
+              <thead>
+                <tr style="color:var(--muted); border-bottom:1px solid var(--line); font-size:10px; text-transform:uppercase;">
+                  <th style="padding:4px 6px;">Code</th>
+                  <th style="padding:4px 6px;">Description</th>
+                  <th style="padding:4px 6px; text-align:center;">Qty</th>
+                  <th style="padding:4px 6px; text-align:right;">Source / Date</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${wo.parts_issued.map(p => `
+                  <tr style="border-bottom:1px solid var(--alt);">
+                    <td style="padding:5px 6px; font-weight:700; font-family:monospace; color:var(--navy);">${escapeHtml(p.code || "N/A")}</td>
+                    <td style="padding:5px 6px; color:var(--ink);">${escapeHtml(p.name || "")}</td>
+                    <td style="padding:5px 6px; text-align:center; font-weight:700; color:var(--coral);">${escapeHtml(String(p.qty || 1))} <span style="font-size:9px; font-weight:normal; color:var(--muted);">${escapeHtml(p.unit || "")}</span></td>
+                    <td style="padding:5px 6px; text-align:right; font-size:10px; color:var(--muted); white-space:nowrap;">
+                      <span class="chip" style="font-size:9px; padding:2px 5px; background:${p.source && p.source.includes('Field') ? '#eaf5e3' : 'var(--alt)'}; color:${p.source && p.source.includes('Field') ? '#4F6228' : 'var(--navy)'};">${escapeHtml(p.source || "Warehouse")}</span>
+                      <div style="font-size:9px; margin-top:2px;">${escapeHtml(p.date || "")}</div>
+                    </td>
+                  </tr>
+                `).join("")}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      ` : "";
+
       return `
         <div class="card jd-wo-card" data-wo="${safeWo}" style="border-inline-start: 5px solid ${statusStyle.border}; margin-bottom:10px; padding:12px 14px;">
           <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px;">
@@ -254,6 +374,7 @@
               <span class="chip" style="background:var(--navy); color:#fff; font-weight:700;">#WO ${safeWo}</span>
               <span class="chip" style="background:${typeStyle.bg}; color:${typeStyle.fg}; font-weight:700;">${escapeHtml(wo.typeLabel)}</span>
               <span class="chip" style="background:${statusStyle.bg}; color:${statusStyle.fg}; font-weight:700;">${escapeHtml(wo.statusLabel)}</span>
+              ${partsBadgeHtml}
             </div>
             <span style="font-size:11px; color:var(--muted); white-space:nowrap;">${safeDate}</span>
           </div>
@@ -276,6 +397,9 @@
             <div>Planned: <b style="color:var(--ink);">${safePlan}</b></div>
             <div>Actual: <b style="color:var(--ink);">${safeAct}</b></div>
           </div>
+
+          <!-- Issued Parts Box -->
+          ${partsBoxHtml}
 
           <!-- Actions -->
           <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:10px; border-top:1px solid var(--line); padding-top:8px;">
@@ -406,6 +530,7 @@
   // Export functions to window
   window.loadJdCmmsData = loadJdCmmsData;
   window.renderJdWorkOrders = renderWorkOrders;
+  window.syncFieldPartsFromWorkLog = syncFieldPartsFromWorkLog;
   window.initJdCmmsTab = initJdCmmsTab;
 
   // Auto-init on DOMContentLoaded or immediate
