@@ -1,4 +1,4 @@
-const CACHE_NAME = "wl-unified-v7";
+const CACHE_NAME = "wl-unified-v8";
 
 const CORE_ASSETS = [
   "./",
@@ -63,10 +63,11 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // Network-First for Navigation (HTML pages)
-  if (event.request.mode === "navigate") {
+  // Network-First for Navigation (HTML pages) and Daily Synced CMMS JSON Data
+  const isDailyData = reqUrl.pathname.endsWith("spare_parts_data.json") || reqUrl.pathname.endsWith("jd_cmms_data.json");
+  if (event.request.mode === "navigate" || isDailyData) {
     event.respondWith(
-      fetch(event.request)
+      fetch(event.request, { cache: "no-cache" })
         .then((networkResponse) => {
           if (networkResponse && networkResponse.ok) {
             const clone = networkResponse.clone();

@@ -1,8 +1,10 @@
 /**
- * Standalone Spare Parts Tracking Engine for Servier Egypt Maintenance Unified PWA
- * Fully decoupled from Work Orders (jd_cmms.js).
- * Reads warehouse records from spare_parts_data.json and merges live field spare parts
- * from local WorkLog storage (wl.v1), whether or not linked to a WO#.
+ * Standalone Warehouse Spare Parts Inventory Engine
+ * Servier Egypt Maintenance Unified PWA (Decoupled from Work Orders)
+ *
+ * Data sources:
+ * 1. Official JD Edwards Daily Inventory (spare_parts_data.json — SPW01..SPW05)
+ * 2. Local field spare parts logged in WorkLog (localStorage "wl.v1")
  */
 
 (function () {
@@ -13,13 +15,22 @@
     filtered: [],
     page: 1,
     pageSize: 20,
-    source: "ALL",
-    site: "ALL",
-    dept: "ALL",
-    machine: "ALL",
+    status: "ALL",
+    warehouse: "ALL",
+    group: "ALL",
+    bin: "ALL",
     q: "",
     initialized: false,
     loaded: false,
+  };
+
+  const WAREHOUSE_LABELS = {
+    SPW01: "SPW01 — Acacia",
+    SPW02: "SPW02 — Palmier",
+    SPW03: "SPW03 — Store 03",
+    SPW04: "SPW04 — Store 04",
+    SPW05: "SPW05 — Store 05",
+    FIELD: "Field (WorkLog)",
   };
 
   const SPARE_CATS = ["Warehouse Issue", "Spare Parts Used", "Spare Parts Needed"];
@@ -33,15 +44,11 @@
       .replace(/'/g, "&#039;");
   }
 
-  function mapBuildingToSite(building) {
+  function mapBuildingToWarehouse(building) {
     const b = String(building || "").toLowerCase();
-    if (b.includes("acacia") || b.includes("s01") || b.includes("spw01")) {
-      return { code: "S01", name: "Acacia (SPW01)" };
-    }
-    if (b.includes("palmier") || b.includes("s02") || b.includes("spw02")) {
-      return { code: "S02", name: "Palmier (SPW02)" };
-    }
-    return { code: "GEN", name: "Utilities & Shared" };
+    if (b.includes("acacia") || b.includes("spw01") || b.includes("s01")) return "SPW01";
+    if (b.includes("palmier") || b.includes("spw02") || b.includes("s02")) return "SPW02";
+    return "FIELD";
   }
 
   function getWorkLogEntries() {
@@ -76,16 +83,14 @@
       const woMatch = haystack.match(woRegex);
       const linkedWo = woMatch ? woMatch[1] : "";
 
-      const siteInfo = mapBuildingToSite(rec.building);
-      const deptLabel = (rec.area || "Field").trim();
-      const deptCode = deptLabel.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "") || "field";
-      const machineLabel = (rec.machine || "General / No machine").trim();
+      const bu = mapBuildingToWarehouse(rec.building);
+      const grp = (rec.machine || rec.area || "Field Log").trim();
 
-      let sourceLabel = "WorkLog (Field)";
+      let sourceLabel = "Field (Used)";
       if (rec.category === "Spare Parts Needed") {
-        sourceLabel = "WorkLog (Needed)";
+        sourceLabel = "Field (Needed)";
       } else if (rec.category === "Warehouse Issue") {
-        sourceLabel = "WorkLog (Warehouse)";
+        sourceLabel = "Field (Issued)";
       }
 
       const items = partsSourceText.split(/[,،;\n]+/).map(s => s.trim()).filter(Boolean);
@@ -98,7 +103,7 @@
         }
 
         const codeMatch = rawItem.match(/\b([A-Z0-9]{4,14}(?:-[A-Z0-9]{1,8})*)\b/i);
-        let code = "FIELD-PART";
+        let code = "FIELD-LOG";
         if (codeMatch && (!qtyMatch || codeMatch[1] !== qtyMatch[1])) {
           code = codeMatch[1].toUpperCase();
         } else if (rec.category === "Spare Parts Needed") {
@@ -106,7 +111,7 @@
         }
 
         let cleanName = rawItem;
-        if (codeMatch && code !== "FIELD-PART" && code !== "REQUEST") {
+        if (codeMatch && code !== "FIELD-LOG" && code !== "REQUEST") {
           cleanName = cleanName.replace(codeMatch[0], "").trim();
         }
         cleanName = cleanName.replace(/^[-:() ]+|[-:() ]+$/g, "").trim() || rawItem;
@@ -116,20 +121,14 @@
           code: code,
           name: cleanName,
           qty: qty,
-          unit: "PCS",
-          date: rec.date || new Date().toISOString().slice(0, 10),
-          source: sourceLabel,
+          bu: bu,
+          loc: (rec.area || "Field").trim(),
+          grp: grp,
+          dt: rec.date || new Date().toISOString().slice(0, 10),
+          wo: linkedWo,
           isField: true,
           isNeeded: rec.category === "Spare Parts Needed",
-          wo: linkedWo,
-          woDesc: rec.title || "",
-          woStatus: rec.status || "",
-          asset: "",
-          label: machineLabel,
-          site: siteInfo.code,
-          siteName: siteInfo.name,
-          dept: deptCode,
-          deptName: deptLabel,
+          fieldSource: sourceLabel,
         });
       });
     });
@@ -139,22 +138,7 @@
 
   function mergeAllParts() {
     const fieldParts = extractFieldPartsFromWorkLog();
-    const seen = new Set();
-    const merged = [];
-
-    const addIfUnique = (p) => {
-      const key = `${p.wo || ""}|${(p.code || "").toUpperCase()}|${(p.name || "").toLowerCase()}|${p.date || ""}`;
-      if (seen.has(key)) return;
-      seen.add(key);
-      merged.push(p);
-    };
-
-    // Field entries first if newer, then warehouse records; sort all by date descending
-    fieldParts.forEach(addIfUnique);
-    SP_STATE.baseParts.forEach(addIfUnique);
-
-    merged.sort((a, b) => String(b.date || "").localeCompare(String(a.date || "")));
-    SP_STATE.allParts = merged;
+    SP_STATE.allParts = [...SP_STATE.baseParts, ...fieldParts];
     updateSparePartsKpis();
   }
 
@@ -174,158 +158,152 @@
         .filter(p => !/prj-?14/i.test(String(p.source || "")));
       SP_STATE.loaded = true;
       window.SPARE_PARTS_DATA = data;
+
+      const syncEl = document.getElementById("sp-sync-date");
+      if (syncEl) {
+        const dtStr = (data.exported_at || "").slice(0, 10);
+        syncEl.textContent = dtStr ? `Updated ${dtStr}` : "Offline Cached";
+      }
+
       mergeAllParts();
-      populateSparePartsHierarchyFilters();
+      populateSparePartsFilters();
       applySparePartsFilters();
       return SP_STATE.allParts;
     } catch (err) {
-      console.warn("Local spare_parts_data.json fetch failed, trying API:", err);
-      try {
-        const res = await fetch("/api/spare_parts");
-        if (!res.ok) throw new Error("API HTTP " + res.status);
-        const apiData = await res.json();
-        SP_STATE.meta = apiData;
-        SP_STATE.baseParts = (Array.isArray(apiData.parts) ? apiData.parts : [])
-          .filter(p => !/prj-?14/i.test(String(p.source || "")));
-        SP_STATE.loaded = true;
-        window.SPARE_PARTS_DATA = apiData;
-        mergeAllParts();
-        populateSparePartsHierarchyFilters();
-        applySparePartsFilters();
-        return SP_STATE.allParts;
-      } catch (apiErr) {
-        console.error("Failed to load spare parts data:", apiErr);
-        // Still show any local WorkLog field parts even if static file failed
-        SP_STATE.baseParts = [];
-        mergeAllParts();
-        populateSparePartsHierarchyFilters();
-        applySparePartsFilters();
-      }
+      console.warn("Local spare_parts_data.json fetch failed:", err);
+      SP_STATE.baseParts = [];
+      mergeAllParts();
+      populateSparePartsFilters();
+      applySparePartsFilters();
     }
   }
 
   function updateSparePartsKpis() {
-    const all = SP_STATE.allParts || [];
-    const uniqueCodes = new Set(
-      all
-        .map(p => (p.code || "").trim().toUpperCase())
-        .filter(c => c && c !== "N/A" && c !== "FIELD-PART" && c !== "REQUEST")
-    );
-    const warehouseCount = all.filter(p => !p.isField).length;
-    const fieldCount = all.filter(p => p.isField).length;
+    const whParts = SP_STATE.baseParts || [];
+    const totalSkus = whParts.length;
+    const inStock = whParts.filter(p => Number(p.qty || 0) > 0).length;
+    const lowStock = whParts.filter(p => {
+      const q = Number(p.qty || 0);
+      return q >= 1 && q <= 2;
+    }).length;
+    const zeroStock = whParts.filter(p => Number(p.qty || 0) <= 0).length;
 
     const elTotal = document.getElementById("sp-kpi-total");
-    const elCodes = document.getElementById("sp-kpi-codes");
-    const elWh = document.getElementById("sp-kpi-warehouse");
-    const elField = document.getElementById("sp-kpi-field");
+    const elIn = document.getElementById("sp-kpi-instock");
+    const elLow = document.getElementById("sp-kpi-low");
+    const elZero = document.getElementById("sp-kpi-zero");
 
-    if (elTotal) elTotal.textContent = all.length.toLocaleString();
-    if (elCodes) elCodes.textContent = uniqueCodes.size.toLocaleString();
-    if (elWh) elWh.textContent = warehouseCount.toLocaleString();
-    if (elField) elField.textContent = fieldCount.toLocaleString();
+    if (elTotal) elTotal.textContent = totalSkus.toLocaleString();
+    if (elIn) elIn.textContent = inStock.toLocaleString();
+    if (elLow) elLow.textContent = lowStock.toLocaleString();
+    if (elZero) elZero.textContent = zeroStock.toLocaleString();
   }
 
-  function populateSparePartsHierarchyFilters() {
-    const siteSel = document.getElementById("sp-filter-site");
-    const deptSel = document.getElementById("sp-filter-dept");
-    const machSel = document.getElementById("sp-filter-machine");
-    if (!siteSel || !deptSel || !machSel) return;
+  function populateSparePartsFilters() {
+    const whSel = document.getElementById("sp-filter-warehouse");
+    const grpSel = document.getElementById("sp-filter-group");
+    const binSel = document.getElementById("sp-filter-bin");
+    if (!whSel || !grpSel || !binSel) return;
 
-    const sites = (SP_STATE.meta && SP_STATE.meta.sites) || [
-      { code: "S01", name: "Acacia (SPW01)" },
-      { code: "S02", name: "Palmier (SPW02)" },
-      { code: "GEN", name: "Utilities & Shared" },
+    const warehouses = (SP_STATE.meta && SP_STATE.meta.warehouses) || [
+      { code: "SPW01", name: "SPW01 — Acacia" },
+      { code: "SPW02", name: "SPW02 — Palmier" },
+      { code: "SPW03", name: "SPW03 — Store 03" },
+      { code: "SPW04", name: "SPW04 — Store 04" },
+      { code: "SPW05", name: "SPW05 — Store 05" },
     ];
 
-    siteSel.innerHTML = '<option value="ALL">All Sites</option>' +
-      sites.map(s => `<option value="${escapeHtml(s.code)}">${escapeHtml(s.name)}</option>`).join("");
+    whSel.innerHTML = '<option value="ALL">All Warehouses</option>' +
+      warehouses.map(w => `<option value="${escapeHtml(w.code)}">${escapeHtml(w.name)}</option>`).join("");
 
-    updateSpDeptFilter();
-    updateSpMachineFilter();
+    updateSpGroupFilter();
+    updateSpBinFilter();
     if (typeof initCustomSelectPickers === "function") initCustomSelectPickers();
     if (typeof updateCustomSelectTrigger === "function") {
-      updateCustomSelectTrigger(siteSel);
-      updateCustomSelectTrigger(deptSel);
-      updateCustomSelectTrigger(machSel);
+      updateCustomSelectTrigger(whSel);
+      updateCustomSelectTrigger(grpSel);
+      updateCustomSelectTrigger(binSel);
     }
   }
 
-  function updateSpDeptFilter() {
-    const deptSel = document.getElementById("sp-filter-dept");
-    if (!deptSel) return;
-
-    const deptsMap = new Map();
-    SP_STATE.allParts.forEach(p => {
-      if (SP_STATE.site === "ALL" || p.site === SP_STATE.site) {
-        if (p.dept && !deptsMap.has(p.dept)) {
-          deptsMap.set(p.dept, p.deptName || p.dept);
-        }
-      }
-    });
-
-    let html = '<option value="ALL">All Departments</option>';
-    deptsMap.forEach((name, code) => {
-      html += `<option value="${escapeHtml(code)}">${escapeHtml(name)}</option>`;
-    });
-    deptSel.innerHTML = html;
-    deptSel.value = "ALL";
-    SP_STATE.dept = "ALL";
-    updateSpMachineFilter();
-    if (typeof initCustomSelectPickers === "function") initCustomSelectPickers();
-    if (typeof updateCustomSelectTrigger === "function") updateCustomSelectTrigger(deptSel);
+  function matchesWarehouse(p, selectedWh) {
+    if (selectedWh === "ALL") return true;
+    if (p.bu === selectedWh) return true;
+    if (Array.isArray(p.bins) && p.bins.some(b => b.bu === selectedWh)) return true;
+    return false;
   }
 
-  function updateSpMachineFilter() {
-    const machSel = document.getElementById("sp-filter-machine");
-    if (!machSel) return;
+  function updateSpGroupFilter() {
+    const grpSel = document.getElementById("sp-filter-group");
+    if (!grpSel) return;
 
-    const machineMap = new Map();
+    const counts = new Map();
     SP_STATE.allParts.forEach(p => {
-      const matchSite = SP_STATE.site === "ALL" || p.site === SP_STATE.site;
-      const matchDept = SP_STATE.dept === "ALL" || p.dept === SP_STATE.dept;
-      const key = p.asset || p.label;
-      if (matchSite && matchDept && key && p.label) {
-        if (!machineMap.has(key)) {
-          machineMap.set(key, p.label);
-        }
+      if (matchesWarehouse(p, SP_STATE.warehouse) && p.grp) {
+        counts.set(p.grp, (counts.get(p.grp) || 0) + 1);
       }
     });
 
-    let html = '<option value="ALL">All Machines</option>';
-    machineMap.forEach((label, key) => {
-      html += `<option value="${escapeHtml(key)}">${escapeHtml(label)}</option>`;
-    });
-    machSel.innerHTML = html;
-    machSel.value = "ALL";
-    SP_STATE.machine = "ALL";
+    const sorted = Array.from(counts.entries()).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+    grpSel.innerHTML = '<option value="ALL">All Equipment / Lines</option>' +
+      sorted.map(([g, c]) => `<option value="${escapeHtml(g)}">${escapeHtml(g)} (${c})</option>`).join("");
+    grpSel.value = "ALL";
+    SP_STATE.group = "ALL";
+    updateSpBinFilter();
     if (typeof initCustomSelectPickers === "function") initCustomSelectPickers();
-    if (typeof updateCustomSelectTrigger === "function") updateCustomSelectTrigger(machSel);
+    if (typeof updateCustomSelectTrigger === "function") updateCustomSelectTrigger(grpSel);
+  }
+
+  function updateSpBinFilter() {
+    const binSel = document.getElementById("sp-filter-bin");
+    if (!binSel) return;
+
+    const bins = new Map();
+    SP_STATE.allParts.forEach(p => {
+      const okWh = matchesWarehouse(p, SP_STATE.warehouse);
+      const okGrp = SP_STATE.group === "ALL" || p.grp === SP_STATE.group;
+      if (okWh && okGrp && p.loc) {
+        bins.set(p.loc, (bins.get(p.loc) || 0) + 1);
+      }
+    });
+
+    const sorted = Array.from(bins.entries()).sort((a, b) => a[0].localeCompare(b[0]));
+    binSel.innerHTML = '<option value="ALL">All Bins / Shelves</option>' +
+      sorted.map(([loc, c]) => `<option value="${escapeHtml(loc)}">${escapeHtml(loc)} (${c})</option>`).join("");
+    binSel.value = "ALL";
+    SP_STATE.bin = "ALL";
+    if (typeof initCustomSelectPickers === "function") initCustomSelectPickers();
+    if (typeof updateCustomSelectTrigger === "function") updateCustomSelectTrigger(binSel);
   }
 
   function applySparePartsFilters() {
     const q = SP_STATE.q.trim().toLowerCase();
 
     SP_STATE.filtered = SP_STATE.allParts.filter(p => {
-      if (SP_STATE.source === "WAREHOUSE" && p.isField) return false;
-      if (SP_STATE.source === "FIELD" && !p.isField) return false;
-      if (SP_STATE.source === "WITH_WO" && !p.wo) return false;
-      if (SP_STATE.source === "NO_WO" && p.wo) return false;
+      const qty = Number(p.qty || 0);
 
-      if (SP_STATE.site !== "ALL" && p.site !== SP_STATE.site) return false;
-      if (SP_STATE.dept !== "ALL" && p.dept !== SP_STATE.dept) return false;
-      if (SP_STATE.machine !== "ALL" && p.asset !== SP_STATE.machine && p.label !== SP_STATE.machine) return false;
+      if (SP_STATE.status === "IN_STOCK" && (p.isField || qty <= 0)) return false;
+      if (SP_STATE.status === "LOW_STOCK" && (p.isField || qty < 1 || qty > 2)) return false;
+      if (SP_STATE.status === "ZERO_STOCK" && (p.isField || qty > 0)) return false;
+      if (SP_STATE.status === "FIELD" && !p.isField) return false;
+
+      if (!matchesWarehouse(p, SP_STATE.warehouse)) return false;
+      if (SP_STATE.group !== "ALL" && p.grp !== SP_STATE.group) return false;
+      if (SP_STATE.bin !== "ALL" && p.loc !== SP_STATE.bin) return false;
 
       if (q) {
+        const binsText = Array.isArray(p.bins) ? p.bins.map(b => `${b.bu} ${b.loc}`).join(" ") : "";
         const text = [
           p.code,
           p.name,
-          p.label,
-          p.asset,
+          p.ref,
+          p.loc,
+          p.grp,
+          p.bu,
+          WAREHOUSE_LABELS[p.bu] || "",
+          p.dt,
           p.wo,
-          p.siteName,
-          p.deptName,
-          p.source,
-          p.date,
+          binsText,
         ].join(" ").toLowerCase();
         if (!text.includes(q)) return false;
       }
@@ -336,27 +314,71 @@
     renderSpareParts();
   }
 
-  function getCardAccent(p) {
-    if (p.isNeeded) return { border: "#FDC300", badgeBg: "#FFF4C2", badgeFg: "#5b4a00" };
-    if (p.isField) return { border: "#91C361", badgeBg: "#eaf5e3", badgeFg: "#4F6228" };
-    return { border: "#242269", badgeBg: "#D3DEF2", badgeFg: "#242269" };
+  function getStockVisual(p) {
+    if (p.isField) {
+      if (p.isNeeded) {
+        return {
+          border: "#FDC300",
+          badgeBg: "#FFF4C2",
+          badgeFg: "#5b4a00",
+          badgeText: `🛒 ${p.fieldSource || "Field (Needed)"}`,
+        };
+      }
+      return {
+        border: "#323C8E",
+        badgeBg: "#e8edf8",
+        badgeFg: "#242269",
+        badgeText: `📝 ${p.fieldSource || "Field (WorkLog)"}`,
+      };
+    }
+
+    const qty = Number(p.qty || 0);
+    if (qty <= 0) {
+      return {
+        border: "#D9534F",
+        badgeBg: "#fde1db",
+        badgeFg: "#D9534F",
+        badgeText: "🔴 Out of Stock (0)",
+      };
+    }
+    if (qty <= 2) {
+      return {
+        border: "#FDC300",
+        badgeBg: "#FFF4C2",
+        badgeFg: "#5b4a00",
+        badgeText: `🟡 Low Stock (${qty})`,
+      };
+    }
+    return {
+      border: "#91C361",
+      badgeBg: "#eaf5e3",
+      badgeFg: "#4F6228",
+      badgeText: `🟢 In Stock (${qty})`,
+    };
   }
 
   function renderSpareParts() {
     const container = document.getElementById("sp-parts-list");
     const loadMoreBtn = document.getElementById("sp-btn-load-more");
+    const countEl = document.getElementById("sp-result-count");
     if (!container) return;
 
     const totalFiltered = SP_STATE.filtered.length;
     const currentLimit = SP_STATE.page * SP_STATE.pageSize;
     const slice = SP_STATE.filtered.slice(0, currentLimit);
 
+    if (countEl) {
+      countEl.textContent = totalFiltered > 0
+        ? `عرض ${slice.length.toLocaleString()} من ${totalFiltered.toLocaleString()} قطعة`
+        : `0 نتائج مطابقة`;
+    }
+
     if (totalFiltered === 0) {
       container.innerHTML = `
         <div class="card center muted" style="padding:24px 16px;">
           <div style="font-size:28px; margin-bottom:8px;">📦</div>
           <b style="color:var(--navy); font-size:15px;">لا توجد قطع غيار مطابقة</b>
-          <p style="font-size:12px; margin:4px 0 0;">جرّب تعديل كلمة البحث أو فلاتر المصدر والموقع والماكينة.</p>
+          <p style="font-size:12px; margin:4px 0 0;">جرّب تعديل كلمة البحث أو فلاتر الحالة والمخزن والماكينة.</p>
         </div>
       `;
       if (loadMoreBtn) loadMoreBtn.style.display = "none";
@@ -364,77 +386,95 @@
     }
 
     container.innerHTML = slice.map((p, idx) => {
-      const accent = getCardAccent(p);
+      const vis = getStockVisual(p);
+      const qty = Number(p.qty || 0);
       const safeCode = escapeHtml(p.code || "N/A");
       const safeName = escapeHtml(p.name || "Unnamed Part");
-      const safeQty = escapeHtml(String(p.qty || 1));
-      const safeUnit = escapeHtml(p.unit || "PCS");
-      const safeDate = escapeHtml(p.date || "N/A");
-      const safeSource = escapeHtml(p.source || "Warehouse");
-      const safeLabel = escapeHtml(p.label || "General");
-      const safeAsset = p.asset ? ` <span style="font-weight:400; color:var(--muted); font-size:12px;">(Asset: ${escapeHtml(p.asset)})</span>` : "";
-      const safeSite = escapeHtml(p.siteName || p.site || "General");
-      const safeDept = escapeHtml(p.deptName || p.dept || "General");
-      const safeWo = escapeHtml(p.wo || "");
+      const safeBu = escapeHtml(p.bu || "SPW01");
+      const safeWhName = escapeHtml(WAREHOUSE_LABELS[p.bu] || p.bu || "Warehouse");
+      const safeGrp = escapeHtml(p.grp || "General Store");
+      const safeLoc = escapeHtml(p.loc || "Unassigned Bin");
+      const safeDate = escapeHtml(p.dt || "N/A");
+      const safeRef = p.ref
+        ? ` &bull; <span style="font-family:monospace; color:var(--navy); font-weight:700;">Ref: ${escapeHtml(p.ref)}</span>`
+        : "";
 
-      const woRefHtml = safeWo
-        ? `<button type="button" class="chip btn-jump-wo" data-wo="${safeWo}" style="border:1px solid #b8cbef; background:var(--alt); color:var(--navy); cursor:pointer; font-weight:700;" title="Open Work Order #${safeWo}">🔗 WO #${safeWo} ↗</button>`
-        : `<span class="chip" style="background:var(--alt); color:var(--muted); font-weight:500;">Standalone (No WO)</span>`;
+      const multiBinsHtml = (Array.isArray(p.bins) && p.bins.length > 1)
+        ? `<div style="display:flex; flex-wrap:wrap; gap:4px; margin:6px 0;">
+            ${p.bins.map(b => `<span class="chip" style="background:var(--alt); color:var(--navy); border:1px solid var(--line); font-size:10.5px;">${escapeHtml(b.bu)} • ${escapeHtml(b.loc)}: <b>${escapeHtml(String(b.qty))}</b></span>`).join("")}
+          </div>`
+        : "";
+
+      const woJumpHtml = p.wo
+        ? `<button type="button" class="chip btn-jump-wo" data-wo="${escapeHtml(p.wo)}" style="border:1px solid #b8cbef; background:var(--alt); color:var(--navy); cursor:pointer; font-weight:700;">🔗 WO #${escapeHtml(p.wo)} ↗</button>`
+        : "";
+
+      const isOut = !p.isField && qty <= 0;
+      const actionBtnHtml = isOut
+        ? `<button type="button" class="btn navy btn-bridge-part" data-sp-idx="${idx}" style="padding:6px 12px; font-size:12px; display:flex; align-items:center; gap:4px;"><span>🛒</span> طلب شراء</button>`
+        : `<button type="button" class="btn main btn-bridge-part" data-sp-idx="${idx}" style="padding:6px 12px; font-size:12px; background:var(--coral); color:#fff; display:flex; align-items:center; gap:4px;"><span>📝</span> صرف / استخدام</button>`;
 
       return `
-        <div class="card sp-part-card" data-sp-idx="${idx}" style="border-inline-start: 5px solid ${accent.border}; margin-bottom:10px; padding:12px 14px;">
+        <div class="card sp-part-card" data-code="${safeCode}" style="border-inline-start: 5px solid ${vis.border}; margin-bottom:10px; padding:12px 14px;">
+          <!-- Header Chips & Date (Servier Card Identity) -->
           <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px;">
             <div style="display:flex; flex-wrap:wrap; gap:4px; align-items:center;">
-              <span class="chip" style="background:var(--navy); color:#fff; font-weight:700; font-family:monospace;">${safeCode}</span>
-              <span class="chip" style="background:#fde1db; color:var(--coral); font-weight:700;">Qty: ${safeQty} ${safeUnit}</span>
-              <span class="chip" style="background:${accent.badgeBg}; color:${accent.badgeFg}; font-weight:700;">${safeSource}</span>
+              <span class="chip" style="background:var(--navy); color:#fff; font-weight:700; font-family:monospace;">#${safeCode}</span>
+              <span class="chip" style="background:${vis.badgeBg}; color:${vis.badgeFg}; font-weight:700;">${vis.badgeText}</span>
+              <span class="chip" style="background:var(--lblue); color:var(--navy); font-weight:700;">${safeBu}</span>
             </div>
             <span style="font-size:11px; color:var(--muted); white-space:nowrap;">${safeDate}</span>
           </div>
 
-          <!-- Spare Part Name -->
-          <div style="background:var(--alt); border-radius:8px; padding:8px 10px; font-size:13.5px; font-weight:700; color:var(--ink); margin:8px 0 6px; line-height:1.4; word-break:break-word;">
+          <!-- Equipment Group & Bin Location -->
+          <div style="margin:8px 0 4px; font-weight:700; color:var(--navy); font-size:14px;">
+            ${safeGrp} <span style="font-weight:700; color:var(--coral); font-size:12px; font-family:monospace;">(Bin: ${safeLoc})</span>
+          </div>
+          <div style="font-size:11px; color:var(--muted); margin-bottom:6px;">
+            <span>${safeWhName}</span>${safeRef}
+          </div>
+
+          <!-- Part Description Box -->
+          <div style="background:var(--alt); border-radius:8px; padding:8px 10px; font-size:13px; color:var(--ink); margin:6px 0; font-family:monospace; line-height:1.4; word-break:break-word;">
             ${safeName}
           </div>
 
-          <!-- Machine & Location -->
-          <div style="font-weight:700; color:var(--navy); font-size:13px; margin-bottom:3px;">
-            ⚙️ ${safeLabel}${safeAsset}
-          </div>
-          <div style="font-size:11px; color:var(--muted); margin-bottom:8px;">
-            <span>${safeSite}</span> &bull; <span>${safeDept}</span>
+          ${multiBinsHtml}
+
+          <!-- Metadata Grid (2-Column Servier Pattern) -->
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px; font-size:11px; color:var(--muted); margin:6px 0;">
+            <div>Qty on Hand: <b style="color:${isOut ? 'var(--red)' : 'var(--navy)'};">${qty.toLocaleString()}</b></div>
+            <div>Last Receipt: <b style="color:var(--ink);">${safeDate}</b></div>
           </div>
 
-          <!-- Optional Reference + Actions -->
-          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-top:8px; border-top:1px solid var(--line); padding-top:8px;">
-            <div>${woRefHtml}</div>
-            <div style="display:flex; gap:6px;">
+          <!-- Actions Footer -->
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-top:10px; border-top:1px solid var(--line); padding-top:8px;">
+            <div>${woJumpHtml}</div>
+            <div style="display:flex; gap:8px;">
               <button type="button" class="btn ghost btn-copy-part" data-code="${safeCode}" style="padding:6px 10px; font-size:12px;">
                 📋 نسخ الكود
               </button>
-              <button type="button" class="btn main btn-bridge-part" data-sp-idx="${idx}" style="padding:6px 11px; font-size:12px; background:var(--coral); color:#fff;">
-                📝 تسجيل بالشغل
-              </button>
+              ${actionBtnHtml}
             </div>
           </div>
         </div>
       `;
     }).join("");
 
-    // Copy part code
+    // Copy JDE code
     container.querySelectorAll(".btn-copy-part").forEach(btn => {
       btn.onclick = (e) => {
         e.stopPropagation();
         const code = btn.dataset.code;
         if (navigator.clipboard && navigator.clipboard.writeText) {
           navigator.clipboard.writeText(code).then(() => {
-            if (typeof toast === "function") toast("تم نسخ كود القطعة: " + code);
+            if (typeof toast === "function") toast("تم نسخ كود القطعة #" + code);
           });
         }
       };
     });
 
-    // Optional jump to WO tab
+    // Optional jump to WO (for field-logged entries that reference a WO)
     container.querySelectorAll(".btn-jump-wo").forEach(btn => {
       btn.onclick = (e) => {
         e.stopPropagation();
@@ -445,7 +485,7 @@
       };
     });
 
-    // Bridge part to WorkLog
+    // Bridge to WorkLog
     container.querySelectorAll(".btn-bridge-part").forEach(btn => {
       btn.onclick = (e) => {
         e.stopPropagation();
@@ -459,7 +499,7 @@
     if (loadMoreBtn) {
       if (currentLimit < totalFiltered) {
         loadMoreBtn.style.display = "block";
-        loadMoreBtn.textContent = `عرض المزيد (${totalFiltered - currentLimit} متبقي)`;
+        loadMoreBtn.textContent = `عرض المزيد (${(totalFiltered - currentLimit).toLocaleString()} متبقي)`;
       } else {
         loadMoreBtn.style.display = "none";
       }
@@ -472,46 +512,50 @@
 
     const searchInput = document.getElementById("sp-search-input");
     if (searchInput) {
+      let timer = null;
       searchInput.oninput = () => {
-        SP_STATE.q = searchInput.value;
-        applySparePartsFilters();
+        clearTimeout(timer);
+        timer = setTimeout(() => {
+          SP_STATE.q = searchInput.value;
+          applySparePartsFilters();
+        }, 120);
       };
     }
 
-    const sourceFilters = document.getElementById("sp-source-filters");
-    if (sourceFilters) {
-      sourceFilters.querySelectorAll("button[data-source]").forEach(btn => {
+    const statusFilters = document.getElementById("sp-status-filters");
+    if (statusFilters) {
+      statusFilters.querySelectorAll("button[data-sp-status]").forEach(btn => {
         btn.onclick = () => {
-          sourceFilters.querySelectorAll("button").forEach(b => b.classList.remove("on"));
+          statusFilters.querySelectorAll("button").forEach(b => b.classList.remove("on"));
           btn.classList.add("on");
-          SP_STATE.source = btn.dataset.source;
+          SP_STATE.status = btn.dataset.spStatus;
           applySparePartsFilters();
         };
       });
     }
 
-    const siteSel = document.getElementById("sp-filter-site");
-    if (siteSel) {
-      siteSel.onchange = () => {
-        SP_STATE.site = siteSel.value;
-        updateSpDeptFilter();
+    const whSel = document.getElementById("sp-filter-warehouse");
+    if (whSel) {
+      whSel.onchange = () => {
+        SP_STATE.warehouse = whSel.value;
+        updateSpGroupFilter();
         applySparePartsFilters();
       };
     }
 
-    const deptSel = document.getElementById("sp-filter-dept");
-    if (deptSel) {
-      deptSel.onchange = () => {
-        SP_STATE.dept = deptSel.value;
-        updateSpMachineFilter();
+    const grpSel = document.getElementById("sp-filter-group");
+    if (grpSel) {
+      grpSel.onchange = () => {
+        SP_STATE.group = grpSel.value;
+        updateSpBinFilter();
         applySparePartsFilters();
       };
     }
 
-    const machSel = document.getElementById("sp-filter-machine");
-    if (machSel) {
-      machSel.onchange = () => {
-        SP_STATE.machine = machSel.value;
+    const binSel = document.getElementById("sp-filter-bin");
+    if (binSel) {
+      binSel.onchange = () => {
+        SP_STATE.bin = binSel.value;
         applySparePartsFilters();
       };
     }

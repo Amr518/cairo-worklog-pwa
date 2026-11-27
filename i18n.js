@@ -248,8 +248,10 @@ const D={
 "📦 قطع الغيار (Spare Parts)":"📦 Spare Parts",
 "📋 نسخ الكود":"📋 Copy Code",
 "📝 تسجيل بالشغل":"📝 Log Part",
+"صرف / استخدام":"Issue / Use",
+"طلب شراء":"Request Purchase",
 "لا توجد قطع غيار مطابقة":"No matching spare parts found",
-"جرّب تعديل كلمة البحث أو فلاتر المصدر والموقع والماكينة.":"Try adjusting your search query or source/site/machine filters."
+"جرّب تعديل كلمة البحث أو فلاتر الحالة والمخزن والماكينة.":"Try adjusting your search query or stock/warehouse/equipment filters."
 };
 /* dynamic patterns */
 const P=[

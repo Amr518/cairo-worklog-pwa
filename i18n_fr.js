@@ -132,6 +132,8 @@ window.I18N_FR={"Extra work":"Travail en plus","Numbers and savings":"Chiffres e
 "📦 Spare Parts":"📦 Pièces de rechange",
 "📋 Copy Code":"📋 Copier le code",
 "📝 Log Part":"📝 Journaliser la pièce",
+"Issue / Use":"Sortie / Utilisation",
+"Request Purchase":"Demande d'achat",
 "No matching spare parts found":"Aucune pièce de rechange correspondante",
-"Try adjusting your search query or source/site/machine filters.":"Essayez d'ajuster votre recherche ou vos filtres."
+"Try adjusting your search query or stock/warehouse/equipment filters.":"Essayez d'ajuster votre recherche ou vos filtres."
 };
