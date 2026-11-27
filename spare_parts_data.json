@@ -1,0 +1,118 @@
+{
+  "version": "1.0",
+  "exported_at": "",
+  "stats": {
+    "total_records": 0,
+    "unique_codes": 0,
+    "total_qty": 0,
+    "linked_wos": 0,
+    "machines": 0
+  },
+  "sites": [
+    {
+      "code": "S01",
+      "name": "Acacia (SPW01)"
+    },
+    {
+      "code": "S02",
+      "name": "Palmier (SPW02)"
+    },
+    {
+      "code": "GEN",
+      "name": "Utilities & Shared"
+    }
+  ],
+  "departments": [
+    {
+      "code": "gran",
+      "name": "Granulation",
+      "group": "EPM"
+    },
+    {
+      "code": "tabl",
+      "name": "Tableting",
+      "group": "EPM"
+    },
+    {
+      "code": "coat",
+      "name": "Coating",
+      "group": "EPM"
+    },
+    {
+      "code": "caps",
+      "name": "Capsule Filling",
+      "group": "EPM"
+    },
+    {
+      "code": "binw",
+      "name": "Bin Washing & Mix",
+      "group": "EPM"
+    },
+    {
+      "code": "l1",
+      "name": "Line 1",
+      "group": "EPM"
+    },
+    {
+      "code": "l2",
+      "name": "Line 2",
+      "group": "EPM"
+    },
+    {
+      "code": "l3",
+      "name": "Line 3",
+      "group": "EPM"
+    },
+    {
+      "code": "l4",
+      "name": "Line 4",
+      "group": "EPM"
+    },
+    {
+      "code": "l5",
+      "name": "Line 5",
+      "group": "EPM"
+    },
+    {
+      "code": "qc",
+      "name": "QC & Weighing",
+      "group": "EPM"
+    },
+    {
+      "code": "hvac",
+      "name": "HVAC & AHU",
+      "group": "UTI"
+    },
+    {
+      "code": "chil",
+      "name": "Chillers & Water",
+      "group": "UTI"
+    },
+    {
+      "code": "comp",
+      "name": "Compressors & Dryers",
+      "group": "UTI"
+    },
+    {
+      "code": "elec",
+      "name": "Electrical & Power",
+      "group": "UTI"
+    },
+    {
+      "code": "fire",
+      "name": "Fire & Safety",
+      "group": "UTI"
+    },
+    {
+      "code": "hand",
+      "name": "Handling & Lifting",
+      "group": "UTI"
+    },
+    {
+      "code": "gen",
+      "name": "General",
+      "group": "UTI"
+    }
+  ],
+  "parts": []
+}

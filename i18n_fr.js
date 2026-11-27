@@ -127,5 +127,11 @@ window.I18N_FR={"Extra work":"Travail en plus","Numbers and savings":"Chiffres e
 "Code copied":"Code copié",
 "Share":"Partager",
 "Copy":"Copier",
-"Connection status: Checking...":"État de connexion : Vérification..."
+"Connection status: Checking...":"État de connexion : Vérification...",
+"📋 Work Orders (WO)":"📋 Ordres de travail (WO)",
+"📦 Spare Parts":"📦 Pièces de rechange",
+"📋 Copy Code":"📋 Copier le code",
+"📝 Log Part":"📝 Journaliser la pièce",
+"No matching spare parts found":"Aucune pièce de rechange correspondante",
+"Try adjusting your search query or source/site/machine filters.":"Essayez d'ajuster votre recherche ou vos filtres."
 };

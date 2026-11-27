@@ -1,4 +1,4 @@
-const CACHE_NAME = "wl-unified-v6";
+const CACHE_NAME = "wl-unified-v7";
 
 const CORE_ASSETS = [
   "./",
@@ -7,6 +7,8 @@ const CORE_ASSETS = [
   "machines.json",
   "jd_cmms_data.json",
   "jd_cmms.js",
+  "spare_parts_data.json",
+  "spare_parts.js",
   "icon-180.png",
   "icon-192.png",
   "icon-512.png",

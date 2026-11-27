@@ -242,7 +242,14 @@ const D={
 "ملغي":"Revoked",
 "تم نسخ الكود":"Code copied",
 "مشاركة":"Share",
-"حالة الاتصال: جاري الفحص...":"Connection status: Checking..."
+"حالة الاتصال: جاري الفحص...":"Connection status: Checking...",
+/* CMMS split WO & Spare Parts */
+"📋 أوامر الشغل (WO)":"📋 Work Orders (WO)",
+"📦 قطع الغيار (Spare Parts)":"📦 Spare Parts",
+"📋 نسخ الكود":"📋 Copy Code",
+"📝 تسجيل بالشغل":"📝 Log Part",
+"لا توجد قطع غيار مطابقة":"No matching spare parts found",
+"جرّب تعديل كلمة البحث أو فلاتر المصدر والموقع والماكينة.":"Try adjusting your search query or source/site/machine filters."
 };
 /* dynamic patterns */
 const P=[
