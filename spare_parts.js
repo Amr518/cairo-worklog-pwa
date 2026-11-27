@@ -192,11 +192,15 @@
     const elIn = document.getElementById("sp-kpi-instock");
     const elLow = document.getElementById("sp-kpi-low");
     const elZero = document.getElementById("sp-kpi-zero");
+    const elChg = document.getElementById("sp-chg-count");
+
+    const changedCount = whParts.filter(p => !!p.chg).length;
 
     if (elTotal) elTotal.textContent = totalSkus.toLocaleString();
     if (elIn) elIn.textContent = inStock.toLocaleString();
     if (elLow) elLow.textContent = lowStock.toLocaleString();
     if (elZero) elZero.textContent = zeroStock.toLocaleString();
+    if (elChg) elChg.textContent = changedCount.toLocaleString();
   }
 
   function populateSparePartsFilters() {
@@ -285,6 +289,7 @@
       if (SP_STATE.status === "IN_STOCK" && (p.isField || qty <= 0)) return false;
       if (SP_STATE.status === "LOW_STOCK" && (p.isField || qty < 1 || qty > 2)) return false;
       if (SP_STATE.status === "ZERO_STOCK" && (p.isField || qty > 0)) return false;
+      if (SP_STATE.status === "CHANGED" && !p.chg) return false;
       if (SP_STATE.status === "FIELD" && !p.isField) return false;
 
       if (!matchesWarehouse(p, SP_STATE.warehouse)) return false;
@@ -310,8 +315,32 @@
       return true;
     });
 
+    if (SP_STATE.status === "CHANGED") {
+      const order = { out: 0, new: 1, up: 2, down: 3 };
+      SP_STATE.filtered.sort((a, b) => (order[a.chg] ?? 9) - (order[b.chg] ?? 9));
+    }
+
     SP_STATE.page = 1;
     renderSpareParts();
+  }
+
+  function getChangeBadgeHtml(p) {
+    if (!p.chg) return "";
+    const qty = Number(p.qty || 0);
+    const prev = Number(p.prev ?? 0);
+    if (p.chg === "new") {
+      return `<span class="chip" style="background:#e8edf8; color:var(--navy); border:1px solid #b8cbef; font-weight:700;">🆕 New</span>`;
+    }
+    if (p.chg === "up") {
+      return `<span class="chip" style="background:#eaf5e3; color:#4F6228; border:1px solid #c4d9a0; font-weight:700;">📈 +${qty - prev} (${prev}→${qty})</span>`;
+    }
+    if (p.chg === "out") {
+      return `<span class="chip" style="background:#fde1db; color:#D9534F; border:1px solid #f5b5a8; font-weight:700;">🚨 Out (${prev}→0)</span>`;
+    }
+    if (p.chg === "down") {
+      return `<span class="chip" style="background:#FFF4C2; color:#5b4a00; border:1px solid #f0d47a; font-weight:700;">📉 -${prev - qty} (${prev}→${qty})</span>`;
+    }
+    return "";
   }
 
   function getStockVisual(p) {
@@ -409,6 +438,8 @@
         ? `<button type="button" class="chip btn-jump-wo" data-wo="${escapeHtml(p.wo)}" style="border:1px solid #b8cbef; background:var(--alt); color:var(--navy); cursor:pointer; font-weight:700;">🔗 WO #${escapeHtml(p.wo)} ↗</button>`
         : "";
 
+      const changeBadgeHtml = getChangeBadgeHtml(p);
+
       const isOut = !p.isField && qty <= 0;
       const actionBtnHtml = isOut
         ? `<button type="button" class="btn navy btn-bridge-part" data-sp-idx="${idx}" style="padding:6px 12px; font-size:12px; display:flex; align-items:center; gap:4px;"><span>🛒</span> طلب شراء</button>`
@@ -421,6 +452,7 @@
             <div style="display:flex; flex-wrap:wrap; gap:4px; align-items:center;">
               <span class="chip" style="background:var(--navy); color:#fff; font-weight:700; font-family:monospace;">#${safeCode}</span>
               <span class="chip" style="background:${vis.badgeBg}; color:${vis.badgeFg}; font-weight:700;">${vis.badgeText}</span>
+              ${changeBadgeHtml}
               <span class="chip" style="background:var(--lblue); color:var(--navy); font-weight:700;">${safeBu}</span>
             </div>
             <span style="font-size:11px; color:var(--muted); white-space:nowrap;">${safeDate}</span>

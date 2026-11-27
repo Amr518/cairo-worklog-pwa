@@ -44,6 +44,7 @@ jobs:
             exit 0
           fi
           DATE_TAG=$(date -u +"%Y-%m-%d")
+          SUMMARY=$(python3 -c "import json; c=json.load(open('spare_parts_data.json')).get('changes',{}); print(f'+{c.get(\"added\",0)} new, +{c.get(\"increased\",0)} up, -{c.get(\"decreased\",0)} down, {c.get(\"newly_out\",0)} out')")
           git add spare_parts_data.json
-          git commit -m "chore(spares): automatic daily JDE inventory sync (${DATE_TAG})"
+          git commit -m "chore(spares): daily sync ${DATE_TAG} (${SUMMARY})"
           git push origin main

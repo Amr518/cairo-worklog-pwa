@@ -1018,12 +1018,9 @@ nav{grid-template-columns:repeat(7,1fr)}
     <!-- Servier Egypt Spare Parts Header Card -->
     <div class="card" style="border-inline-start: 5px solid var(--coral); background: linear-gradient(135deg, #ffffff 0%, #f4f5fa 100%);">
       <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:8px;">
-        <h3 style="margin:0; color:var(--navy); font-size:16px; font-weight:700;">Warehouse Spare Parts Inventory</h3>
+        <h3 style="margin:0; color:var(--navy); font-size:16px; font-weight:700;">Warehouse Spare Parts</h3>
         <span class="chip" id="sp-sync-date" style="background:var(--lblue); color:var(--navy); font-size:11px; white-space:nowrap;">Offline Cached</span>
       </div>
-      <p style="font-size:12px; color:var(--muted); margin:0 0 10px;">
-        Official JD Edwards warehouse stock (SPW01–SPW05) &amp; field WorkLog parts — synced daily from inventory report, decoupled from Work Orders.
-      </p>
 
       <!-- KPI Metric Pills (Servier Identity) -->
       <div style="display:grid; grid-template-columns:repeat(4, 1fr); gap:6px; margin-top:8px;">
@@ -1048,7 +1045,7 @@ nav{grid-template-columns:repeat(7,1fr)}
 
     <!-- Search & Filter Controls -->
     <div class="card" style="padding:10px 12px; margin-bottom:10px;">
-      <input type="text" id="sp-search-input" placeholder="🔍 Search JDE Code, Description, OEM Ref, Bin, Machine..." style="padding:9px 12px; font-size:14px; margin-bottom:8px;">
+      <input type="text" id="sp-search-input" placeholder="🔍 Search Code, Name, Bin, Machine..." style="padding:9px 12px; font-size:14px; margin-bottom:8px;">
 
       <!-- Stock Status / Source Filter Chips -->
       <div class="chips" id="sp-status-filters" style="margin-bottom:8px;">
@@ -1056,6 +1053,7 @@ nav{grid-template-columns:repeat(7,1fr)}
         <button type="button" data-sp-status="IN_STOCK">🟢 In Stock</button>
         <button type="button" data-sp-status="LOW_STOCK">🟡 Low (1-2)</button>
         <button type="button" data-sp-status="ZERO_STOCK">🔴 Out (0)</button>
+        <button type="button" data-sp-status="CHANGED" id="sp-chip-changed">🔔 Changes (<span id="sp-chg-count">0</span>)</button>
         <button type="button" data-sp-status="FIELD">📝 Field Log</button>
       </div>
 

@@ -257,8 +257,75 @@ def convert_csv(csv_path: str, out_path: str, source_date: str = ""):
 
         parts_list.append(rec)
 
-    # Sort: In Stock first (highest qty or newest receipt), then Zero Stock alphabetically
+    # Sort: In Stock first (highest qty), then Zero Stock alphabetically
     parts_list.sort(key=lambda p: (0 if p["qty"] > 0 else 1, -p["qty"], p["grp"], p["code"]))
+
+    # Load previous snapshot (if any) to compute simple daily changes
+    prev_map = {}
+    had_prev = False
+    if os.path.exists(out_path):
+        try:
+            with open(out_path, "r", encoding="utf-8") as pf:
+                prev_data = json.load(pf)
+            prev_parts = prev_data.get("parts") or []
+            if prev_parts:
+                had_prev = True
+                for pp in prev_parts:
+                    p_code = str(pp.get("code") or "").strip()
+                    if p_code:
+                        prev_map[p_code] = {
+                            "qty": pp.get("qty", 0),
+                            "bu": pp.get("bu", ""),
+                            "loc": pp.get("loc", ""),
+                            "name": pp.get("name", ""),
+                        }
+        except Exception:
+            had_prev = False
+
+    changes = {"total": 0, "added": 0, "increased": 0, "decreased": 0, "newly_out": 0}
+    any_data_diff = not had_prev
+
+    if had_prev:
+        new_codes = set()
+        for rec in parts_list:
+            code = rec["code"]
+            new_codes.add(code)
+            qty = rec["qty"]
+            if code not in prev_map:
+                rec["chg"] = "new"
+                changes["added"] += 1
+                changes["total"] += 1
+                any_data_diff = True
+            else:
+                prev = prev_map[code]
+                p_qty = prev["qty"]
+                if qty > p_qty:
+                    rec["chg"] = "up"
+                    rec["prev"] = p_qty
+                    changes["increased"] += 1
+                    changes["total"] += 1
+                    any_data_diff = True
+                elif qty == 0 and p_qty > 0:
+                    rec["chg"] = "out"
+                    rec["prev"] = p_qty
+                    changes["newly_out"] += 1
+                    changes["total"] += 1
+                    any_data_diff = True
+                elif qty < p_qty:
+                    rec["chg"] = "down"
+                    rec["prev"] = p_qty
+                    changes["decreased"] += 1
+                    changes["total"] += 1
+                    any_data_diff = True
+                elif rec["bu"] != prev["bu"] or rec["loc"] != prev["loc"] or rec["name"] != prev["name"]:
+                    any_data_diff = True
+
+        if len(new_codes) != len(prev_map):
+            any_data_diff = True
+
+        if not any_data_diff:
+            print("No inventory changes detected vs existing spare_parts_data.json; keeping existing file.")
+            return
 
     warehouses = [
         {"code": bu, "name": WAREHOUSE_NAMES.get(bu, bu)}
@@ -274,7 +341,7 @@ def convert_csv(csv_path: str, out_path: str, source_date: str = ""):
     exported_at = source_date or datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
     payload = {
-        "version": "2.0",
+        "version": "2.1",
         "source": "JDE Daily Inventory Report",
         "exported_at": exported_at,
         "stats": {
@@ -285,6 +352,7 @@ def convert_csv(csv_path: str, out_path: str, source_date: str = ""):
             "total_units": total_units,
             "anomalies": len(anomalies),
         },
+        "changes": changes,
         "warehouses": warehouses,
         "groups": groups,
         "parts": parts_list,
@@ -296,6 +364,7 @@ def convert_csv(csv_path: str, out_path: str, source_date: str = ""):
     size_kb = os.path.getsize(out_path) / 1024
     print(f"Exported {len(parts_list)} unique SKUs to {out_path} ({size_kb:.1f} KB)")
     print("Stats:", payload["stats"])
+    print("Changes:", changes)
     if anomalies:
         print("Anomalies (negative stock rows ignored/clamped):", anomalies)
 
