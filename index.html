@@ -12,7 +12,7 @@
 <meta name="apple-mobile-web-app-title" content="شغلي">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#242269">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https://finds-happen-thumbnails-nissan.trycloudflare.com https://*.trycloudflare.com https://api.openai.com http://127.0.0.1:8098 http://localhost:8098;">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https://finds-happen-thumbnails-nissan.trycloudflare.com https://*.trycloudflare.com https://*.onrender.com https://*.up.railway.app https://*.run.app https://*.fly.dev https://api.openai.com http://127.0.0.1:8098 http://localhost:8098;">
 <style>
 :root{--navy:#242269;--coral:#F55B41;--green:#91C361;--blue:#323C8E;--purple:#9B7DCD;--gold:#FDC300;--lblue:#D3DEF2;--cyan:#47BFD9;--alt:#F4F5FA;--line:#dfe2ec;--ink:#1d1d2b;--muted:#6b6f86;--red:#D9534F}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -813,6 +813,21 @@ nav{grid-template-columns:repeat(7,1fr)}
         <div style="border-top:1px solid var(--line);margin-top:12px;padding-top:10px;">
           <label style="margin-top:0;">الأكواد المسجلة:</label>
           <div id="admin-invites-list" style="display:flex;flex-direction:column;gap:6px;margin-top:6px"></div>
+        </div>
+
+        <!-- NotebookLM Cookies Manager (Hot-Reload) -->
+        <div style="border-top:1px solid var(--line);margin-top:12px;padding-top:10px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px;">
+            <label style="margin:0;">🍪 كوكيز NotebookLM</label>
+            <span id="admin-cookie-status" class="badge-live" style="font-size:11px;">جاري الفحص...</span>
+          </div>
+          <div style="display:flex;gap:6px;margin-bottom:6px;">
+            <button type="button" class="btn ghost" id="btn-upload-cookies-file" style="flex:1;padding:7px 10px;font-size:12px;">📁 رفع storage_state.json</button>
+            <button type="button" class="btn ghost" id="btn-test-admin-cookies" style="padding:7px 10px;font-size:12px;white-space:nowrap;">🔍 اختبار</button>
+            <input type="file" id="admin-cookies-file" accept=".json,application/json" hidden>
+          </div>
+          <textarea id="admin-cookies-input" dir="ltr" rows="2" placeholder="أو الصق محتوى storage_state.json هنا..." style="min-height:58px;font-size:12px;font-family:monospace;"></textarea>
+          <button type="button" class="btn navy block" id="btn-save-admin-cookies" style="margin-top:6px;padding:8px 12px;font-size:13px;">💾 تحديث الكوكيز</button>
         </div>
 
         <!-- Lock button -->
@@ -3198,10 +3213,11 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 });
 
-// ==================== ADMIN INVITE CONTROLLER ====================
+// ==================== ADMIN INVITE & COOKIES CONTROLLER ====================
 let activeAdminToken = null;
 const ADMIN_STATS_EP = "/a/stats";
 const ADMIN_INVITE_EP = "/a/invite";
+const ADMIN_COOKIES_EP = "/a/cookies";
 // Label regex pattern ^[A-Za-z0-9_-]{2,32}$ (e.g. ^tech_ahmed$)
 const ADMIN_LABEL_REGEX = /^[A-Za-z0-9_-]{2,32}$/;
 
@@ -3292,6 +3308,63 @@ async function revokeAdminInvite(label) {
   return await res.json();
 }
 
+async function updateAdminCookies(rawPayload, testAfterSave = true) {
+  const token = getAdminToken();
+  if (!token) throw new Error("Missing admin token");
+  const res = await fetch(GATEWAY_URL + ADMIN_COOKIES_EP, {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${token}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({ storage_state: rawPayload, test_after_save: testAfterSave })
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error?.message || err.detail || `HTTP ${res.status}`);
+  }
+  return await res.json();
+}
+
+async function testAdminCookies() {
+  const token = getAdminToken();
+  if (!token) throw new Error("Missing admin token");
+  const res = await fetch(GATEWAY_URL + ADMIN_COOKIES_EP + "/test", {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${token}`
+    }
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error?.message || err.detail || `HTTP ${res.status}`);
+  }
+  return await res.json();
+}
+
+function renderAdminCookieStatus(cookies) {
+  const el = document.getElementById("admin-cookie-status");
+  if (!el) return;
+  if (!cookies) {
+    el.textContent = "⚪ غير مدعوم";
+    el.style.color = "var(--muted)";
+    return;
+  }
+  if (!cookies.configured) {
+    el.textContent = "🔴 غير مرفوعة";
+    el.style.color = "var(--red)";
+    return;
+  }
+  const dt = cookies.updated_at ? cookies.updated_at.slice(0, 10) : "";
+  if (cookies.verified === false) {
+    el.textContent = "🔴 منتهية" + (dt ? " (" + dt + ")" : "");
+    el.style.color = "var(--red)";
+  } else {
+    el.textContent = "🟢 مفعلة (" + (cookies.cookies_count || 0) + ")" + (dt ? " · " + dt : "");
+    el.style.color = "#276727";
+  }
+}
+
 function renderAdminDashboard(data) {
   if (!data) return;
   const statusEl = document.getElementById("admin-worker-status");
@@ -3299,6 +3372,12 @@ function renderAdminDashboard(data) {
     statusEl.textContent = "حالة الاتصال: " + (data.worker_online ? "🟢 متصل" : "🔴 غير متصل");
     statusEl.style.color = data.worker_online ? "#276727" : "var(--red)";
   }
+  renderAdminCookieStatus(data.cookies || (data.cookies_configured !== undefined ? {
+    configured: data.cookies_configured,
+    verified: data.cookies_valid,
+    cookies_count: data.cookies_count,
+    updated_at: data.cookies_updated_at
+  } : null));
   const countEl = document.getElementById("admin-today-count");
   if (countEl) {
     const today = data.global_today_count ?? 0;
@@ -3517,6 +3596,78 @@ function setupAdminUI() {
         if (typeof toast === 'function') toast("تعذر إيقاف الكود: " + err.message);
       } finally {
         btn.disabled = false;
+      }
+    };
+  }
+
+  // NotebookLM Cookies Hot-Reload UI Hooks
+  const uploadCookiesBtn = document.getElementById("btn-upload-cookies-file");
+  const cookiesFileInput = document.getElementById("admin-cookies-file");
+  const cookiesTextarea = document.getElementById("admin-cookies-input");
+  const saveCookiesBtn = document.getElementById("btn-save-admin-cookies");
+  const testCookiesBtn = document.getElementById("btn-test-admin-cookies");
+
+  if (uploadCookiesBtn && cookiesFileInput) {
+    uploadCookiesBtn.onclick = () => cookiesFileInput.click();
+    cookiesFileInput.onchange = async (e) => {
+      const f = e.target.files && e.target.files[0];
+      e.target.value = "";
+      if (!f) return;
+      try {
+        const text = await f.text();
+        if (cookiesTextarea) cookiesTextarea.value = text;
+        if (typeof toast === 'function') toast("تم تحميل الملف — اضغط تحديث الكوكيز للحفظ");
+      } catch (err) {
+        if (typeof toast === 'function') toast("تعذر قراءة الملف: " + err.message);
+      }
+    };
+  }
+
+  if (saveCookiesBtn && cookiesTextarea) {
+    saveCookiesBtn.onclick = async () => {
+      const raw = cookiesTextarea.value.trim();
+      if (!raw) {
+        if (typeof toast === 'function') toast("ارفع ملف storage_state.json أو الصق محتواه أولاً");
+        return;
+      }
+      try {
+        saveCookiesBtn.disabled = true;
+        saveCookiesBtn.textContent = "⏳ جاري الحفظ والاختبار...";
+        const res = await updateAdminCookies(raw, true);
+        cookiesTextarea.value = "";
+        renderAdminCookieStatus(res.cookies);
+        const testOk = !res.test || res.test.ok;
+        if (typeof toast === 'function') {
+          toast(testOk
+            ? "✅ تم تحديث كوكيز NotebookLM بنجاح"
+            : "⚠️ تم الحفظ لكن فشل اختبار الاتصال: " + (res.test.error || ""));
+        }
+      } catch (err) {
+        if (typeof toast === 'function') toast("فشل تحديث الكوكيز: " + err.message);
+      } finally {
+        saveCookiesBtn.disabled = false;
+        saveCookiesBtn.textContent = "💾 تحديث الكوكيز";
+      }
+    };
+  }
+
+  if (testCookiesBtn) {
+    testCookiesBtn.onclick = async () => {
+      try {
+        testCookiesBtn.disabled = true;
+        testCookiesBtn.textContent = "⏳...";
+        const res = await testAdminCookies();
+        renderAdminCookieStatus(res.cookies);
+        if (typeof toast === 'function') {
+          toast(res.test && res.test.ok
+            ? "🟢 كوكيز NotebookLM شغالة (" + (res.test.notebooks_count ?? 0) + " دفتر)"
+            : "🔴 الكوكيز منتهية أو غير صالحة: " + ((res.test && res.test.error) || ""));
+        }
+      } catch (err) {
+        if (typeof toast === 'function') toast("فشل الاختبار: " + err.message);
+      } finally {
+        testCookiesBtn.disabled = false;
+        testCookiesBtn.textContent = "🔍 اختبار";
       }
     };
   }
