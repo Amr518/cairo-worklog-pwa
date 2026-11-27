@@ -143,6 +143,9 @@
   }
 
   async function loadSparePartsData(forceRefresh) {
+    if (typeof window.isAppUnlocked === "function" && !window.isAppUnlocked()) {
+      return [];
+    }
     if (SP_STATE.loaded && !forceRefresh) {
       mergeAllParts();
       applySparePartsFilters();
@@ -150,9 +153,11 @@
     }
 
     try {
-      const res = await fetch("spare_parts_data.json");
-      if (!res.ok) throw new Error("HTTP " + res.status);
-      const data = await res.json();
+      let data = null;
+      if (typeof window.fetchProtectedData === "function") {
+        data = await window.fetchProtectedData("/v1/data/spare_parts", "cairo_cache_spares");
+      }
+      if (!data) throw new Error("No authenticated spare parts data");
       SP_STATE.meta = data;
       SP_STATE.baseParts = (Array.isArray(data.parts) ? data.parts : [])
         .filter(p => !/prj-?14/i.test(String(p.source || "")));
@@ -170,11 +175,12 @@
       applySparePartsFilters();
       return SP_STATE.allParts;
     } catch (err) {
-      console.warn("Local spare_parts_data.json fetch failed:", err);
+      console.warn("Protected Spare Parts fetch failed:", err);
       SP_STATE.baseParts = [];
       mergeAllParts();
       populateSparePartsFilters();
       applySparePartsFilters();
+      return SP_STATE.allParts;
     }
   }
 

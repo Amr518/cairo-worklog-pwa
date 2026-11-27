@@ -1,13 +1,10 @@
-const CACHE_NAME = "wl-unified-v10";
+const CACHE_NAME = "wl-unified-v11";
 
 const CORE_ASSETS = [
   "./",
   "index.html",
   "manifest.webmanifest",
-  "machines.json",
-  "jd_cmms_data.json",
   "jd_cmms.js",
-  "spare_parts_data.json",
   "spare_parts.js",
   "icon-180.png",
   "icon-192.png",
@@ -19,7 +16,6 @@ const CORE_ASSETS = [
   // Worklog Sub-App (Zero Modification)
   "apps/worklog/index.html",
   "apps/worklog/manifest.webmanifest",
-  "apps/worklog/machines.json",
   "apps/worklog/kb.js",
   "apps/worklog/coach.js",
   "apps/worklog/analysis.js",

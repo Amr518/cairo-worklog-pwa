@@ -653,10 +653,72 @@ nav{grid-template-columns:repeat(7,1fr)}
   display: none !important;
   pointer-events: none !important;
 }
+body.app-locked {
+  overflow: hidden;
+  padding-bottom: 0;
+}
+body.app-locked > header,
+body.app-locked > main,
+body.app-locked > nav,
+body.app-locked > #gate {
+  display: none !important;
+}
+#accessGate {
+  position: fixed;
+  inset: 0;
+  background: var(--navy);
+  color: #fff;
+  z-index: 250;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+#accessGate.unlocked {
+  display: none !important;
+}
+#accessGate .box {
+  background: #fff;
+  color: var(--ink);
+  border-radius: 18px;
+  border-top: 6px solid var(--coral);
+  padding: 22px 20px;
+  width: 100%;
+  max-width: 420px;
+  box-shadow: 0 14px 36px rgba(0, 0, 0, 0.35);
+}
 
 </style>
 </head>
-<body>
+<body class="app-locked">
+<!-- ============ FULL-APP ACCESS LOCK GATE ============ -->
+<div id="accessGate">
+  <div class="box">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+      <img src="logo.png" alt="Servier" style="height:32px;width:auto;display:block;">
+      <span class="chip" style="background:var(--lblue);color:var(--navy);font-size:11px;">🔒 دخول مصرح فقط</span>
+    </div>
+    <h2 style="margin:0 0 6px;color:var(--navy);font-size:19px;">بوابة صيانة سيرفييه</h2>
+    <p class="muted" style="margin:0 0 14px;line-height:1.6;">
+      أدخل كود التفعيل المعتمد من مهندس الصيانة لفتح التطبيق.
+    </p>
+    <div id="access-tech-box">
+      <label for="access-code-input" style="margin-top:0;">🔑 كود التفعيل</label>
+      <input id="access-code-input" type="password" autocomplete="off" dir="ltr" placeholder="أدخل كود التفعيل..." style="font-size:16px;letter-spacing:1px;">
+      <button type="button" class="btn main block" id="btn-access-unlock" style="margin-top:12px;">دخول للتطبيق</button>
+    </div>
+    <div id="access-admin-box" class="hidden">
+      <label for="access-admin-token" style="margin-top:0;">🛡️ رمز الأدمن (Admin Token)</label>
+      <input id="access-admin-token" type="password" autocomplete="off" dir="ltr" placeholder="أدخل رمز الأدمن..." style="font-size:16px;letter-spacing:1px;">
+      <button type="button" class="btn navy block" id="btn-access-admin-unlock" style="margin-top:12px;">دخول كأدمن</button>
+    </div>
+    <div id="access-gate-msg" style="font-size:12.5px;margin-top:10px;min-height:18px;color:var(--red);font-weight:600;"></div>
+    <div style="margin-top:10px;border-top:1px solid var(--line);padding-top:10px;text-align:center;">
+      <button type="button" class="lnk" id="btn-toggle-access-mode">🛡️ دخول الأدمن</button>
+    </div>
+  </div>
+</div>
+
 <header>
   <h1>شغلي<small id="who" class="noTr">Servier Egypt</small></h1>
   <button id="langBtn" data-lang-toggle type="button" class="noTr" aria-label="Language" style="background:transparent;border:1px solid rgba(255,255,255,.6);color:#fff;border-radius:8px;padding:4px 10px;font-weight:700;font-size:13px;cursor:pointer">EN</button>
@@ -835,6 +897,7 @@ nav{grid-template-columns:repeat(7,1fr)}
       </div>
     </div>
   </div>
+  <button class="btn ghost block" id="btn-app-logout" type="button" style="margin-bottom:10px;">🔒 قفل التطبيق وتسجيل الخروج</button>
   <button class="btn red block" id="wipe">مسح كل بياناتي من الموبايل</button>
 </section>
 
@@ -1825,15 +1888,16 @@ if ("serviceWorker" in navigator) {
   });
 }
 
-// Harmonize BUILTIN machines with machines.json
+// Harmonize BUILTIN machines with authenticated backend /v1/data/machines
 async function loadAndHarmonizeMachines() {
+  if (typeof window.isAppUnlocked === 'function' && !window.isAppUnlocked()) return;
   try {
-    const res = await fetch('machines.json');
-    if (!res.ok) return;
-    const data = await res.json();
+    const data = (typeof window.fetchProtectedData === 'function')
+      ? await window.fetchProtectedData('/v1/data/machines', 'cairo_cache_machines')
+      : null;
+    if (!data) return;
     const machinesList = Array.isArray(data) ? data : (data.machines || []);
-    
-    // Add missing machines into BUILTIN
+
     const existingNames = new Set(BUILTIN.map(m => m.name));
     machinesList.forEach(m => {
       const name = m.display_name || m.name;
@@ -1845,13 +1909,11 @@ async function loadAndHarmonizeMachines() {
         existingNames.add(name);
       }
     });
-    // Re-fill selects if renderAll exists
     if (typeof fillSelects === 'function') fillSelects();
-  } catch(e) {
-    console.warn("Could not harmonize machines.json:", e);
+  } catch (e) {
+    console.warn("Could not harmonize protected machines:", e);
   }
 }
-loadAndHarmonizeMachines();
 
 
 /* ==================== PRJ-30 DIAGNOSTIC CORE SCRIPT ==================== */
@@ -2089,6 +2151,9 @@ window.renderDiagnosticI18n = function() {
 };
 
 async function initDiagnosticCore() {
+  if (typeof window.isAppUnlocked === 'function' && !window.isAppUnlocked()) {
+    return;
+  }
   if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
     brokerMode = 'local';
   } else {
@@ -2096,17 +2161,13 @@ async function initDiagnosticCore() {
   }
   updateInviteStatusUI();
 
-  const diagTab = document.getElementById('t-diag');
-  if (diagTab && diagTab.classList.contains('on')) {
-    maybePromptInviteOnFirstUse();
-  }
-
   try {
     let data = null;
     try {
-      const res = await fetch('./machines.json');
-      if (res.ok) {
-        const staticMachines = await res.json();
+      const staticMachines = (typeof window.fetchProtectedData === 'function')
+        ? await window.fetchProtectedData('/v1/data/machines', 'cairo_cache_machines')
+        : null;
+      if (staticMachines) {
         const rawList = Array.isArray(staticMachines) ? staticMachines : (staticMachines.machines || []);
         const sections = { ACACIA: new Set(), PALMIER: new Set() };
         rawList.forEach(m => {
@@ -2123,10 +2184,11 @@ async function initDiagnosticCore() {
           }
         };
       }
-    } catch(e) {}
+    } catch (e) {}
 
     if (!data && brokerMode === 'local') {
-      const res = await fetch('/api/machines');
+      const headers = (typeof window.getAuthHeaders === 'function') ? window.getAuthHeaders() : {};
+      const res = await fetch('/api/machines', { headers });
       if (res.ok) data = await res.json();
     }
 
@@ -3673,11 +3735,259 @@ function setupAdminUI() {
   }
 }
 
-// Initialize on page load
-initGatewayUrl().finally(() => {
-  initDiagnosticCore();
+// ==================== FULL-APP ACCESS GATE & PROTECTED DATA CONTROLLER ====================
+const ACCESS_VERIFIED_KEY = "cairo_access_verified";
+const PROTECTED_CACHE_KEYS = ["cairo_cache_wo", "cairo_cache_spares", "cairo_cache_machines"];
+
+function isAppUnlocked() {
+  try {
+    const mode = localStorage.getItem(ACCESS_VERIFIED_KEY);
+    if (mode === "tech" && getInviteCode()) return true;
+    if (mode === "admin" && getAdminToken()) return true;
+  } catch (e) {}
+  return false;
+}
+window.isAppUnlocked = isAppUnlocked;
+
+function getAuthHeaders() {
+  const mode = localStorage.getItem(ACCESS_VERIFIED_KEY);
+  if (mode === "admin" && getAdminToken()) {
+    return { "Authorization": `Bearer ${getAdminToken()}` };
+  }
+  const code = getInviteCode();
+  if (code) {
+    return { "X-Invite-Code": code };
+  }
+  if (getAdminToken()) {
+    return { "Authorization": `Bearer ${getAdminToken()}` };
+  }
+  return {};
+}
+window.getAuthHeaders = getAuthHeaders;
+
+function lockAppAndPurgeCache(reasonMsg) {
+  try {
+    localStorage.removeItem(ACCESS_VERIFIED_KEY);
+    localStorage.removeItem(INVITE_STORAGE_KEY);
+    PROTECTED_CACHE_KEYS.forEach(k => localStorage.removeItem(k));
+    clearAdminToken();
+  } catch (e) {}
+
+  window.JD_CMMS_DATA = null;
+  window.SPARE_PARTS_DATA = null;
+  allMachines = [];
+
+  document.body.classList.add("app-locked");
+  const gate = document.getElementById("accessGate");
+  if (gate) gate.classList.remove("unlocked");
+  const msgEl = document.getElementById("access-gate-msg");
+  if (msgEl) msgEl.textContent = reasonMsg || "";
+  const codeInp = document.getElementById("access-code-input");
+  if (codeInp) codeInp.value = "";
+  const admInp = document.getElementById("access-admin-token");
+  if (admInp) admInp.value = "";
+}
+window.lockAppAndPurgeCache = lockAppAndPurgeCache;
+
+async function fetchProtectedData(endpointPath, cacheKey) {
+  if (!isAppUnlocked()) return null;
+  const headers = getAuthHeaders();
+
+  try {
+    const res = await fetchWithGatewayRetry(endpointPath, {
+      method: "GET",
+      headers,
+      cache: "no-store",
+    });
+    if (res.status === 401 || res.status === 403) {
+      lockAppAndPurgeCache("⛔ تم إيقاف كود التفعيل أو انتهت صلاحيته. تواصل مع مهندس الصيانة.");
+      return null;
+    }
+    if (res.ok) {
+      const data = await res.json();
+      if (cacheKey) {
+        try { localStorage.setItem(cacheKey, JSON.stringify(data)); } catch (e) {}
+      }
+      return data;
+    }
+  } catch (err) {
+    console.warn("[ProtectedData] Network fetch failed for", endpointPath, "- checking device cache");
+  }
+
+  if (cacheKey) {
+    try {
+      const cached = localStorage.getItem(cacheKey);
+      if (cached) return JSON.parse(cached);
+    } catch (e) {}
+  }
+  return null;
+}
+window.fetchProtectedData = fetchProtectedData;
+
+function unlockAppAndBootData(openAdminAfter) {
+  document.body.classList.remove("app-locked");
+  const gate = document.getElementById("accessGate");
+  if (gate) gate.classList.add("unlocked");
+
   updateInviteStatusUI();
   setupAdminUI();
+  loadAndHarmonizeMachines();
+  initDiagnosticCore();
+  if (typeof window.loadJdCmmsData === "function") window.loadJdCmmsData(true);
+  if (typeof window.loadSparePartsData === "function") window.loadSparePartsData(true);
+
+  if (openAdminAfter) {
+    if (typeof switchTab === "function") switchTab("set");
+    const panel = document.getElementById("adminPanel");
+    const toggleBtn = document.getElementById("btn-toggle-admin");
+    if (panel && panel.classList.contains("hidden") && toggleBtn) {
+      toggleBtn.click();
+    }
+  }
+}
+
+async function verifyInviteCodeRemote(code) {
+  const res = await fetchWithGatewayRetry("/v1/auth/verify", {
+    method: "POST",
+    headers: { "X-Invite-Code": code },
+  });
+  if (res.status === 401 || res.status === 403) {
+    return { ok: false, unauthorized: true };
+  }
+  if (!res.ok) {
+    throw new Error("HTTP " + res.status);
+  }
+  const data = await res.json().catch(() => ({}));
+  return { ok: true, label: data.label || "" };
+}
+
+async function verifyAdminTokenRemote(token) {
+  const res = await fetchWithGatewayRetry(ADMIN_STATS_EP, {
+    method: "GET",
+    headers: { "Authorization": `Bearer ${token}` },
+  });
+  if (res.status === 401 || res.status === 403) {
+    return { ok: false, unauthorized: true };
+  }
+  if (!res.ok) {
+    throw new Error("HTTP " + res.status);
+  }
+  return { ok: true };
+}
+
+function setupAccessGateUI() {
+  const techBox = document.getElementById("access-tech-box");
+  const adminBox = document.getElementById("access-admin-box");
+  const toggleBtn = document.getElementById("btn-toggle-access-mode");
+  const codeInp = document.getElementById("access-code-input");
+  const unlockBtn = document.getElementById("btn-access-unlock");
+  const admInp = document.getElementById("access-admin-token");
+  const admUnlockBtn = document.getElementById("btn-access-admin-unlock");
+  const msgEl = document.getElementById("access-gate-msg");
+  const logoutBtn = document.getElementById("btn-app-logout");
+
+  if (toggleBtn && techBox && adminBox) {
+    toggleBtn.onclick = () => {
+      const showingAdmin = !adminBox.classList.contains("hidden");
+      adminBox.classList.toggle("hidden", showingAdmin);
+      techBox.classList.toggle("hidden", !showingAdmin);
+      toggleBtn.textContent = showingAdmin ? "🛡️ دخول الأدمن" : "🔑 دخول بكود فني";
+      if (msgEl) msgEl.textContent = "";
+    };
+  }
+
+  const doTechUnlock = async () => {
+    const code = (codeInp && codeInp.value || "").trim();
+    if (!code) {
+      if (msgEl) msgEl.textContent = "يرجى إدخال كود التفعيل أولاً.";
+      return;
+    }
+    if (msgEl) msgEl.textContent = "";
+    if (unlockBtn) { unlockBtn.disabled = true; unlockBtn.textContent = "⏳ جاري التحقق..."; }
+    try {
+      const res = await verifyInviteCodeRemote(code);
+      if (res.ok) {
+        saveInviteCode(code);
+        localStorage.setItem(ACCESS_VERIFIED_KEY, "tech");
+        unlockAppAndBootData(false);
+        if (typeof toast === "function") toast("✅ تم تفعيل الدخول بنجاح");
+      } else {
+        if (msgEl) msgEl.textContent = "❌ كود التفعيل غير صحيح أو تم إيقافه. تواصل مع مهندس الصيانة.";
+      }
+    } catch (err) {
+      if (msgEl) msgEl.textContent = "⚠️ تعذر الاتصال بالخادم للتحقق من الكود. تأكد من الإنترنت وحاول مرة أخرى.";
+    } finally {
+      if (unlockBtn) { unlockBtn.disabled = false; unlockBtn.textContent = "دخول للتطبيق"; }
+    }
+  };
+
+  if (unlockBtn) unlockBtn.onclick = doTechUnlock;
+  if (codeInp) codeInp.onkeydown = (e) => { if (e.key === "Enter") doTechUnlock(); };
+
+  const doAdminUnlock = async () => {
+    const token = (admInp && admInp.value || "").trim();
+    if (!token) {
+      if (msgEl) msgEl.textContent = "يرجى إدخال رمز الأدمن.";
+      return;
+    }
+    if (msgEl) msgEl.textContent = "";
+    if (admUnlockBtn) { admUnlockBtn.disabled = true; admUnlockBtn.textContent = "⏳ جاري التحقق..."; }
+    try {
+      const res = await verifyAdminTokenRemote(token);
+      if (res.ok) {
+        setAdminToken(token, true);
+        localStorage.setItem(ACCESS_VERIFIED_KEY, "admin");
+        unlockAppAndBootData(true);
+        if (typeof toast === "function") toast("🛡️ تم الدخول كأدمن");
+      } else {
+        if (msgEl) msgEl.textContent = "❌ رمز الأدمن غير صحيح.";
+      }
+    } catch (err) {
+      if (msgEl) msgEl.textContent = "⚠️ تعذر الاتصال بالخادم للتحقق من رمز الأدمن.";
+    } finally {
+      if (admUnlockBtn) { admUnlockBtn.disabled = false; admUnlockBtn.textContent = "دخول كأدمن"; }
+    }
+  };
+
+  if (admUnlockBtn) admUnlockBtn.onclick = doAdminUnlock;
+  if (admInp) admInp.onkeydown = (e) => { if (e.key === "Enter") doAdminUnlock(); };
+
+  if (logoutBtn) {
+    logoutBtn.onclick = () => {
+      if (!confirm("هل تريد قفل التطبيق وتسجيل الخروج؟")) return;
+      lockAppAndPurgeCache("🔒 تم قفل التطبيق. أدخل كود التفعيل للدخول مرة أخرى.");
+    };
+  }
+}
+
+async function initAppAccessGate() {
+  setupAccessGateUI();
+  if (isAppUnlocked()) {
+    // Allow immediate offline access, then silently re-verify revocation when online
+    unlockAppAndBootData(false);
+    if (navigator.onLine) {
+      try {
+        const mode = localStorage.getItem(ACCESS_VERIFIED_KEY);
+        const check = mode === "admin"
+          ? await verifyAdminTokenRemote(getAdminToken())
+          : await verifyInviteCodeRemote(getInviteCode());
+        if (check.unauthorized) {
+          lockAppAndPurgeCache("⛔ تم إيقاف كود التفعيل الخاص بك. تواصل مع مهندس الصيانة.");
+        }
+      } catch (e) {
+        // Offline or server temporarily unreachable: keep device cache usable
+      }
+    }
+  } else {
+    document.body.classList.add("app-locked");
+    const gate = document.getElementById("accessGate");
+    if (gate) gate.classList.remove("unlocked");
+  }
+}
+
+// Initialize on page load
+initGatewayUrl().finally(() => {
+  initAppAccessGate();
 });
 document.addEventListener('DOMContentLoaded', () => {
   setupAdminUI();

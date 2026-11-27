@@ -41,12 +41,17 @@
     return { bg: "#f4f5fa", fg: "#6b6f86" };
   }
 
-  async function loadJdCmmsData() {
-    if (STATE.data) return STATE.data;
+  async function loadJdCmmsData(forceRefresh) {
+    if (typeof window.isAppUnlocked === "function" && !window.isAppUnlocked()) {
+      return null;
+    }
+    if (STATE.data && !forceRefresh) return STATE.data;
     try {
-      const res = await fetch("jd_cmms_data.json");
-      if (!res.ok) throw new Error("HTTP " + res.status);
-      const data = await res.json();
+      let data = null;
+      if (typeof window.fetchProtectedData === "function") {
+        data = await window.fetchProtectedData("/v1/data/work_orders", "cairo_cache_wo");
+      }
+      if (!data) throw new Error("No authenticated work orders data");
       STATE.data = data;
       window.JD_CMMS_DATA = data;
       updateKpis(data.stats);
@@ -54,29 +59,12 @@
       applyFilters();
       return data;
     } catch (err) {
-      console.warn("Local jd_cmms_data.json fetch failed, trying API:", err);
-      try {
-        const res = await fetch("/api/jd_cmms/work_orders");
-        if (!res.ok) throw new Error("API HTTP " + res.status);
-        const apiData = await res.json();
-        const fullData = {
-          version: "1.0",
-          stats: { total: apiData.total || (apiData.work_orders || []).length },
-          work_orders: apiData.work_orders || [],
-        };
-        STATE.data = fullData;
-        window.JD_CMMS_DATA = fullData;
-        updateKpis(fullData.stats);
-        populateHierarchyFilters(fullData);
-        applyFilters();
-        return fullData;
-      } catch (apiErr) {
-        console.error("Failed to load JD CMMS data:", apiErr);
-        const container = document.getElementById("jd-wo-list");
-        if (container) {
-          container.innerHTML = '<div class="card center" style="color:var(--coral);">⚠️ يتعذر تحميل أوامر الشغل حالياً</div>';
-        }
+      console.warn("Protected Work Orders fetch failed:", err);
+      const container = document.getElementById("jd-wo-list");
+      if (container) {
+        container.innerHTML = '<div class="card center" style="color:var(--coral);">🔒 يتطلب اتصال بالخادم وكود تفعيل ساري لتحميل أوامر الشغل</div>';
       }
+      return null;
     }
   }
 
